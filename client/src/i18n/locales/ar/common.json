@@ -1,0 +1,50 @@
+{
+  "appName": "ريستورا",
+  "nav": {
+    "home": "الرئيسية",
+    "login": "تسجيل الدخول",
+    "register": "ابدأ الآن",
+    "dashboard": "لوحة التحكم",
+    "logout": "تسجيل الخروج"
+  },
+  "actions": {
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "delete": "حذف",
+    "edit": "تعديل",
+    "add": "إضافة",
+    "search": "بحث",
+    "filter": "تصفية",
+    "confirm": "تأكيد",
+    "back": "رجوع",
+    "close": "إغلاق",
+    "view": "عرض",
+    "submit": "إرسال",
+    "loading": "جارٍ التحميل...",
+    "saving": "جارٍ الحفظ..."
+  },
+  "status": {
+    "active": "نشط",
+    "inactive": "غير نشط",
+    "pending": "في الانتظار",
+    "confirmed": "مؤكد",
+    "cancelled": "ملغى",
+    "completed": "مكتمل"
+  },
+  "messages": {
+    "error": "حدث خطأ ما",
+    "noData": "لا توجد بيانات",
+    "success": "تمت العملية بنجاح",
+    "deleteConfirm": "هل أنت متأكد من الحذف؟"
+  },
+  "theme": {
+    "light": "فاتح",
+    "dark": "داكن",
+    "toggle": "تغيير المظهر"
+  },
+  "language": {
+    "en": "الإنجليزية",
+    "fr": "الفرنسية",
+    "ar": "العربية"
+  }
+}

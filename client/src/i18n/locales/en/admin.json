@@ -1,0 +1,111 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "pos": "POS",
+    "tables": "Tables",
+    "kitchen": "Kitchen",
+    "menu": "Menu",
+    "orders": "Orders",
+    "reservations": "Reservations",
+    "staff": "Staff",
+    "settings": "Settings",
+    "inventory": "Inventory",
+    "delivery": "Delivery",
+    "analytics": "Analytics",
+    "customers": "Customers",
+    "marketing": "Marketing"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Welcome back",
+    "todayOrders": "Today's Orders",
+    "customers": "Customers",
+    "reservations": "Reservations",
+    "revenue": "Today's Revenue",
+    "recentOrders": "Recent Orders",
+    "noOrders": "No orders yet today",
+    "modules": "Quick Access",
+    "modulesDesc": "Jump to any section of your restaurant",
+    "open": "Open",
+    "moduleDesc": {
+      "pos": "Process sales, take orders & manage payments",
+      "tables": "View table status, seat guests & manage floor",
+      "kitchen": "Live kitchen display for order preparation",
+      "menu": "Manage items, categories & pricing",
+      "orders": "Track all orders — dine-in, takeaway & delivery",
+      "reservations": "Handle bookings & guest scheduling",
+      "staff": "Manage your team roles & access",
+      "settings": "Configure restaurant profile & preferences"
+    }
+  },
+  "orders": {
+    "title": "Orders",
+    "new": "New Order",
+    "dineIn": "Dine In",
+    "takeaway": "Takeaway",
+    "delivery": "Delivery",
+    "qr": "QR Order",
+    "orderNumber": "Order #",
+    "table": "Table",
+    "total": "Total",
+    "status": "Status",
+    "time": "Time"
+  },
+  "tables": {
+    "title": "Tables",
+    "available": "Available",
+    "occupied": "Occupied",
+    "reserved": "Reserved",
+    "cleaning": "Cleaning",
+    "addTable": "Add Table",
+    "capacity": "Capacity",
+    "floor": "Floor"
+  },
+  "kitchen": {
+    "title": "Kitchen Display",
+    "pending": "Pending",
+    "preparing": "Preparing",
+    "ready": "Ready",
+    "newOrder": "New Order",
+    "markReady": "Mark Ready",
+    "preparingTime": "Preparing for"
+  },
+  "menu": {
+    "title": "Menu",
+    "addCategory": "Add Category",
+    "addItem": "Add Item",
+    "category": "Category",
+    "price": "Price",
+    "available": "Available",
+    "unavailable": "Unavailable"
+  },
+  "reservations": {
+    "title": "Reservations",
+    "new": "New Reservation",
+    "date": "Date",
+    "time": "Time",
+    "guests": "Guests",
+    "name": "Name",
+    "phone": "Phone",
+    "table": "Table",
+    "status": "Status",
+    "notes": "Notes"
+  },
+  "staff": {
+    "title": "Staff",
+    "addMember": "Add Member",
+    "role": "Role",
+    "email": "Email",
+    "phone": "Phone",
+    "status": "Status"
+  },
+  "settings": {
+    "title": "Settings",
+    "restaurant": "Restaurant Info",
+    "hours": "Opening Hours",
+    "payments": "Payments",
+    "notifications": "Notifications",
+    "taxes": "Taxes & Fees",
+    "theme": "Appearance"
+  }
+}

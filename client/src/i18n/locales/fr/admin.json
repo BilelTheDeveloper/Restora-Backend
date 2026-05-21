@@ -1,0 +1,111 @@
+{
+  "nav": {
+    "dashboard": "Tableau de bord",
+    "pos": "Caisse",
+    "tables": "Tables",
+    "kitchen": "Cuisine",
+    "menu": "Menu",
+    "orders": "Commandes",
+    "reservations": "Réservations",
+    "staff": "Personnel",
+    "settings": "Paramètres",
+    "inventory": "Inventaire",
+    "delivery": "Livraison",
+    "analytics": "Analyses",
+    "customers": "Clients",
+    "marketing": "Marketing"
+  },
+  "dashboard": {
+    "title": "Tableau de bord",
+    "welcome": "Bon retour",
+    "todayOrders": "Commandes aujourd'hui",
+    "customers": "Clients",
+    "reservations": "Réservations",
+    "revenue": "Chiffre du jour",
+    "recentOrders": "Commandes récentes",
+    "noOrders": "Aucune commande aujourd'hui",
+    "modules": "Accès rapide",
+    "modulesDesc": "Accédez à n'importe quelle section de votre restaurant",
+    "open": "Ouvrir",
+    "moduleDesc": {
+      "pos": "Encaisser, prendre les commandes et gérer les paiements",
+      "tables": "État des tables, placement des clients et gestion de la salle",
+      "kitchen": "Affichage cuisine en direct pour la préparation",
+      "menu": "Gérer les articles, catégories et tarifs",
+      "orders": "Suivre toutes les commandes — sur place, à emporter et livraison",
+      "reservations": "Gérer les réservations et le planning des clients",
+      "staff": "Gérer votre équipe et les accès",
+      "settings": "Configurer le profil et les préférences du restaurant"
+    }
+  },
+  "orders": {
+    "title": "Commandes",
+    "new": "Nouvelle commande",
+    "dineIn": "Sur place",
+    "takeaway": "À emporter",
+    "delivery": "Livraison",
+    "qr": "Commande QR",
+    "orderNumber": "Commande n°",
+    "table": "Table",
+    "total": "Total",
+    "status": "Statut",
+    "time": "Heure"
+  },
+  "tables": {
+    "title": "Tables",
+    "available": "Disponible",
+    "occupied": "Occupée",
+    "reserved": "Réservée",
+    "cleaning": "Nettoyage",
+    "addTable": "Ajouter une table",
+    "capacity": "Capacité",
+    "floor": "Salle"
+  },
+  "kitchen": {
+    "title": "Affichage cuisine",
+    "pending": "En attente",
+    "preparing": "En préparation",
+    "ready": "Prêt",
+    "newOrder": "Nouvelle commande",
+    "markReady": "Marquer prêt",
+    "preparingTime": "En préparation depuis"
+  },
+  "menu": {
+    "title": "Menu",
+    "addCategory": "Ajouter une catégorie",
+    "addItem": "Ajouter un article",
+    "category": "Catégorie",
+    "price": "Prix",
+    "available": "Disponible",
+    "unavailable": "Indisponible"
+  },
+  "reservations": {
+    "title": "Réservations",
+    "new": "Nouvelle réservation",
+    "date": "Date",
+    "time": "Heure",
+    "guests": "Couverts",
+    "name": "Nom",
+    "phone": "Téléphone",
+    "table": "Table",
+    "status": "Statut",
+    "notes": "Notes"
+  },
+  "staff": {
+    "title": "Personnel",
+    "addMember": "Ajouter un membre",
+    "role": "Rôle",
+    "email": "E-mail",
+    "phone": "Téléphone",
+    "status": "Statut"
+  },
+  "settings": {
+    "title": "Paramètres",
+    "restaurant": "Infos restaurant",
+    "hours": "Horaires d'ouverture",
+    "payments": "Paiements",
+    "notifications": "Notifications",
+    "taxes": "Taxes et frais",
+    "theme": "Apparence"
+  }
+}

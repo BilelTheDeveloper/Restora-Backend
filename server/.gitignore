@@ -1,0 +1,26 @@
+# ─── Dependencies ──────────────────────────────────────────
+node_modules/
+
+# ─── Environment — NEVER commit real secrets ───────────────
+.env
+.env.*
+!.env.example
+
+# ─── Logs ──────────────────────────────────────────────────
+*.log
+npm-debug.log*
+
+# ─── OS ────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ─── User uploads ──────────────────────────────────────────
+uploads/
+
+# ─── SSL / Keys / Certificates ─────────────────────────────
+*.pem
+*.key
+*.cert
+*.crt
+*.p12
+*.pfx

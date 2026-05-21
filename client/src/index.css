@@ -1,0 +1,123 @@
+/* ─── Google Fonts (must be first) ───────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cairo:wght@400;500;600;700&display=swap');
+
+@import "tailwindcss";
+
+/* ─── Class-based dark mode ───────────────────────────────── */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ─── Design tokens ───────────────────────────────────────── */
+:root {
+  /* Backgrounds */
+  --bg-base:     #f5f5f5;
+  --bg-surface:  #ffffff;
+  --bg-elevated: #ffffff;
+  --bg-hover:    #f9fafb;
+
+  /* Text */
+  --text-primary:   #111827;
+  --text-secondary: #4b5563;
+  --text-muted:     #9ca3af;
+  --text-inverse:   #ffffff;
+
+  /* Borders */
+  --border:       #e5e7eb;
+  --border-focus: #f97316;
+
+  /* Brand */
+  --primary:       #f97316;
+  --primary-hover: #ea580c;
+  --primary-light: #fff7ed;
+
+  /* Status */
+  --success: #22c55e;
+  --error:   #ef4444;
+  --warning: #f59e0b;
+  --info:    #3b82f6;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow:    0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+.dark {
+  --bg-base:     #0a0a0a;
+  --bg-surface:  #141414;
+  --bg-elevated: #1e1e1e;
+  --bg-hover:    #1a1a1a;
+
+  --text-primary:   #f9fafb;
+  --text-secondary: #9ca3af;
+  --text-muted:     #6b7280;
+  --text-inverse:   #111827;
+
+  --border:       #262626;
+  --border-focus: #f97316;
+
+  --primary:       #f97316;
+  --primary-hover: #fb923c;
+  --primary-light: #1c1008;
+
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.4);
+  --shadow:    0 1px 3px 0 rgb(0 0 0 / 0.5);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5);
+}
+
+/* ─── Base styles ─────────────────────────────────────────── */
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.2s, color 0.2s;
+  }
+
+  /* Arabic font override */
+  :lang(ar), [dir="rtl"] {
+    font-family: 'Cairo', system-ui, sans-serif;
+  }
+
+  #root { width: 100%; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+  /* Focus ring */
+  *:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+}
+
+/* ─── Utility classes ─────────────────────────────────────── */
+@layer utilities {
+  .bg-base     { background-color: var(--bg-base); }
+  .bg-surface  { background-color: var(--bg-surface); }
+  .bg-elevated { background-color: var(--bg-elevated); }
+  .bg-hover    { background-color: var(--bg-hover); }
+
+  .text-primary-color   { color: var(--text-primary); }
+  .text-secondary-color { color: var(--text-secondary); }
+  .text-muted-color     { color: var(--text-muted); }
+
+  .border-base  { border-color: var(--border); }
+  .shadow-base  { box-shadow: var(--shadow); }
+  .shadow-base-sm { box-shadow: var(--shadow-sm); }
+  .shadow-base-lg { box-shadow: var(--shadow-lg); }
+
+  /* Transitions */
+  .transition-theme { transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease; }
+}

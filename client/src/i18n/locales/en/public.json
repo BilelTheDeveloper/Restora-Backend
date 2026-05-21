@@ -1,0 +1,28 @@
+{
+  "home": {
+    "hero": {
+      "title": "Discover Great Restaurants",
+      "subtitle": "Order online, book a table, or explore nearby restaurants",
+      "searchPlaceholder": "Search restaurants or cuisine...",
+      "cityPlaceholder": "City",
+      "searchBtn": "Search"
+    },
+    "featured": "Featured Restaurants",
+    "searchResults": "Search Results",
+    "noResults": "No restaurants found",
+    "filters": {
+      "all": "All",
+      "halal": "Halal",
+      "delivery": "Delivery",
+      "open": "Open Now"
+    }
+  },
+  "restaurant": {
+    "reviews": "reviews",
+    "order": "Order Now",
+    "reserve": "Reserve Table",
+    "menu": "Menu",
+    "info": "Info",
+    "noMenu": "Menu coming soon"
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "appName": "Restora",
+  "nav": {
+    "home": "Accueil",
+    "login": "Connexion",
+    "register": "Commencer",
+    "dashboard": "Tableau de bord",
+    "logout": "Déconnexion"
+  },
+  "actions": {
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "add": "Ajouter",
+    "search": "Rechercher",
+    "filter": "Filtrer",
+    "confirm": "Confirmer",
+    "back": "Retour",
+    "close": "Fermer",
+    "view": "Voir",
+    "submit": "Soumettre",
+    "loading": "Chargement...",
+    "saving": "Enregistrement..."
+  },
+  "status": {
+    "active": "Actif",
+    "inactive": "Inactif",
+    "pending": "En attente",
+    "confirmed": "Confirmé",
+    "cancelled": "Annulé",
+    "completed": "Terminé"
+  },
+  "messages": {
+    "error": "Une erreur s'est produite",
+    "noData": "Aucune donnée trouvée",
+    "success": "Opération réussie",
+    "deleteConfirm": "Voulez-vous vraiment supprimer ceci ?"
+  },
+  "theme": {
+    "light": "Clair",
+    "dark": "Sombre",
+    "toggle": "Changer le thème"
+  },
+  "language": {
+    "en": "Anglais",
+    "fr": "Français",
+    "ar": "Arabe"
+  }
+}

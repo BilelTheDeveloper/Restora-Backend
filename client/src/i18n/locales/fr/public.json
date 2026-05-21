@@ -1,0 +1,28 @@
+{
+  "home": {
+    "hero": {
+      "title": "Découvrez de Super Restaurants",
+      "subtitle": "Commandez en ligne, réservez une table ou explorez les restaurants près de chez vous",
+      "searchPlaceholder": "Chercher un restaurant ou une cuisine...",
+      "cityPlaceholder": "Ville",
+      "searchBtn": "Rechercher"
+    },
+    "featured": "Restaurants en vedette",
+    "searchResults": "Résultats de recherche",
+    "noResults": "Aucun restaurant trouvé",
+    "filters": {
+      "all": "Tous",
+      "halal": "Halal",
+      "delivery": "Livraison",
+      "open": "Ouvert maintenant"
+    }
+  },
+  "restaurant": {
+    "reviews": "avis",
+    "order": "Commander",
+    "reserve": "Réserver une table",
+    "menu": "Menu",
+    "info": "Infos",
+    "noMenu": "Menu bientôt disponible"
+  }
+}
