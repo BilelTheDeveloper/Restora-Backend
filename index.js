@@ -8,7 +8,7 @@ import dotenv from 'dotenv';
 import connectDB from './src/config/db.js';
 import routes from './src/routes/index.js';
 import { errorHandler, notFound } from './src/middleware/errorHandler.js';
-import { apiLimiter, sanitize, hppProtect } from './src/middleware/security.js';
+import { apiLimiter, sanitize } from './src/middleware/security.js';
 
 dotenv.config();
 
@@ -58,9 +58,8 @@ app.use('/api', apiLimiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// ─── Sanitization & HPP ────────────────────────────────────
+// ─── Sanitization ──────────────────────────────────────────
 app.use(sanitize);
-app.use(hppProtect);
 
 // ─── Logging (dev only) ────────────────────────────────────
 if (!isProd) app.use(morgan('dev'));

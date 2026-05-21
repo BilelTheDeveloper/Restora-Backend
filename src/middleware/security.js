@@ -1,10 +1,9 @@
 import rateLimit from 'express-rate-limit';
 import mongoSanitize from 'express-mongo-sanitize';
-import hpp from 'hpp';
 
 // General API rate limit
 export const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 min
+  windowMs: 15 * 60 * 1000,
   max: 200,
   standardHeaders: true,
   legacyHeaders: false,
@@ -13,7 +12,7 @@ export const apiLimiter = rateLimit({
 
 // Strict limit for auth routes
 export const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 min
+  windowMs: 15 * 60 * 1000,
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
@@ -23,8 +22,3 @@ export const authLimiter = rateLimit({
 
 // NoSQL injection sanitizer — strips $ and . from req.body, query, params
 export const sanitize = mongoSanitize({ replaceWith: '_' });
-
-// HTTP Parameter Pollution protection
-export const hppProtect = hpp({
-  whitelist: ['sort', 'fields', 'page', 'limit', 'cuisine', 'city'],
-});
