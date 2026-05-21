@@ -20,5 +20,11 @@ export const authLimiter = rateLimit({
   skipSuccessfulRequests: true,
 });
 
-// NoSQL injection sanitizer — strips $ and . from req.body, query, params
-export const sanitize = mongoSanitize({ replaceWith: '_' });
+// NoSQL injection sanitizer — Express 5 makes req.query a read-only getter,
+// so we sanitize only req.body and req.params manually instead of using the
+// express-mongo-sanitize middleware directly (which tries to reassign all three).
+export const sanitize = (req, _res, next) => {
+  if (req.body) req.body = mongoSanitize.sanitize(req.body, { replaceWith: '_' });
+  if (req.params) req.params = mongoSanitize.sanitize(req.params, { replaceWith: '_' });
+  next();
+};
