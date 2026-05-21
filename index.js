@@ -14,10 +14,16 @@ dotenv.config();
 
 const isProd = process.env.NODE_ENV === 'production';
 
+if (isProd && !process.env.CLIENT_URL) {
+  console.warn('⚠️  WARNING: CLIENT_URL is not set — CORS will block all browser requests in production!');
+}
+
 // Strip trailing slashes so "https://app.vercel.app/" and "https://app.vercel.app" both work
 const allowedOrigins = process.env.CLIENT_URL
   ? process.env.CLIENT_URL.split(',').map((o) => o.trim().replace(/\/$/, ''))
   : ['http://localhost:5173'];
+
+console.log('CORS allowed origins:', allowedOrigins);
 
 const app = express();
 const httpServer = createServer(app);
