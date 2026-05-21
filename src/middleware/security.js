@@ -1,5 +1,4 @@
 import rateLimit from 'express-rate-limit';
-import mongoSanitize from 'express-mongo-sanitize';
 
 // General API rate limit
 export const apiLimiter = rateLimit({
@@ -20,11 +19,22 @@ export const authLimiter = rateLimit({
   skipSuccessfulRequests: true,
 });
 
-// NoSQL injection sanitizer — Express 5 makes req.query a read-only getter,
-// so we sanitize only req.body and req.params manually instead of using the
-// express-mongo-sanitize middleware directly (which tries to reassign all three).
+// Strip MongoDB operator keys ($, .) from an object in-place.
+// express-mongo-sanitize is incompatible with Express 5 (tries to reassign
+// req.query which is a read-only getter), so we inline the logic here.
+function stripOperators(obj) {
+  if (!obj || typeof obj !== 'object') return;
+  for (const key of Object.keys(obj)) {
+    if (key.startsWith('$') || key.includes('.')) {
+      delete obj[key];
+    } else {
+      stripOperators(obj[key]);
+    }
+  }
+}
+
 export const sanitize = (req, _res, next) => {
-  if (req.body) req.body = mongoSanitize.sanitize(req.body, { replaceWith: '_' });
-  if (req.params) req.params = mongoSanitize.sanitize(req.params, { replaceWith: '_' });
+  stripOperators(req.body);
+  stripOperators(req.params);
   next();
 };
