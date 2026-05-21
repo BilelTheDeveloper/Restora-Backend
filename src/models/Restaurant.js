@@ -58,7 +58,6 @@ const restaurantSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-restaurantSchema.index({ slug: 1 });
 restaurantSchema.index({ 'address.city': 1 });
 restaurantSchema.index({ cuisine: 1 });
 restaurantSchema.index({ rating: -1 });
