@@ -14,8 +14,9 @@ dotenv.config();
 
 const isProd = process.env.NODE_ENV === 'production';
 
+// Strip trailing slashes so "https://app.vercel.app/" and "https://app.vercel.app" both work
 const allowedOrigins = process.env.CLIENT_URL
-  ? process.env.CLIENT_URL.split(',').map((o) => o.trim())
+  ? process.env.CLIENT_URL.split(',').map((o) => o.trim().replace(/\/$/, ''))
   : ['http://localhost:5173'];
 
 const app = express();
