@@ -47,7 +47,7 @@ export default function App() {
         <Route
           path="/admin"
           element={
-            <ProtectedRoute roles={['owner', 'manager', 'cashier', 'waiter', 'kitchen', 'superadmin']}>
+            <ProtectedRoute>
               <AdminLayout />
             </ProtectedRoute>
           }

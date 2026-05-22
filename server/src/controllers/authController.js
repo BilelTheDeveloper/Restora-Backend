@@ -12,7 +12,7 @@ export const register = async (req, res, next) => {
       return next(new Error('Email already registered'));
     }
 
-    const user = await User.create({ name, email, password, phone, role: 'customer' });
+    const user = await User.create({ name, email, password, phone, role: 'owner' });
     const token = generateToken(user._id);
 
     created(res, { user: { _id: user._id, name: user.name, email: user.email, role: user.role }, token });
