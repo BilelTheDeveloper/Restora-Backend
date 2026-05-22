@@ -21,6 +21,8 @@ import Orders from './pages/admin/Orders';
 import Reservations from './pages/admin/Reservations';
 import Staff from './pages/admin/Staff';
 import Settings from './pages/admin/Settings';
+import KYC from './pages/admin/KYC';
+import RestaurantSetup from './pages/admin/RestaurantSetup';
 
 const ProtectedRoute = ({ children, roles }) => {
   const { user, token } = useAuthStore();
@@ -61,6 +63,8 @@ export default function App() {
           <Route path="reservations" element={<Reservations />} />
           <Route path="staff" element={<Staff />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="kyc" element={<KYC />} />
+          <Route path="setup" element={<RestaurantSetup />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
