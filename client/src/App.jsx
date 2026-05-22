@@ -23,6 +23,7 @@ import Staff from './pages/admin/Staff';
 import Settings from './pages/admin/Settings';
 import KYC from './pages/admin/KYC';
 import RestaurantSetup from './pages/admin/RestaurantSetup';
+import Themes from './pages/admin/Themes';
 
 const ProtectedRoute = ({ children, roles }) => {
   const { user, token } = useAuthStore();
@@ -38,8 +39,10 @@ export default function App() {
         {/* Public */}
         <Route element={<PublicLayout />}>
           <Route path="/" element={<Home />} />
-          <Route path="/r/:slug" element={<RestaurantPage />} />
         </Route>
+
+        {/* Restaurant public page — standalone, no shared nav/footer */}
+        <Route path="/r/:slug" element={<RestaurantPage />} />
 
         {/* Auth */}
         <Route path="/login" element={<Login />} />
@@ -65,6 +68,7 @@ export default function App() {
           <Route path="settings" element={<Settings />} />
           <Route path="kyc" element={<KYC />} />
           <Route path="setup" element={<RestaurantSetup />} />
+          <Route path="themes" element={<Themes />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

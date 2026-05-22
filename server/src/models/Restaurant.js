@@ -80,6 +80,20 @@ const restaurantSchema = new mongoose.Schema(
       expiresAt: { type: Date },
     },
 
+    template: {
+      id:             { type: String, default: 'classic' },
+      slogan:         { type: String },
+      heroBackground: { type: String },
+      primaryColor:   { type: String, default: '#f97316' },
+      badge:          { type: String },
+      footerText:     { type: String },
+      showMenu:       { type: Boolean, default: true },
+      showGallery:    { type: Boolean, default: true },
+      showAbout:      { type: Boolean, default: true },
+      showHours:      { type: Boolean, default: false },
+      ctaText:        { type: String, default: 'Reserve a Table' },
+    },
+
     rating:      { type: Number, default: 0, min: 0, max: 5 },
     reviewCount: { type: Number, default: 0 },
     isVerified:  { type: Boolean, default: true },

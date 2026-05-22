@@ -6,7 +6,7 @@ import {
   LayoutDashboard, ShoppingCart, Grid3X3, ChefHat,
   BookOpen, ClipboardList, CalendarDays, Users, Settings,
   LogOut, PanelLeftClose, PanelLeftOpen, Bell, Search,
-  Utensils, Lock, ShieldCheck, Store, ShieldAlert,
+  Utensils, Lock, ShieldCheck, Store, ShieldAlert, Palette,
 } from 'lucide-react';
 
 // ── Navigation ─────────────────────────────────────────────
@@ -25,8 +25,9 @@ const NAV_GROUPS = [
   {
     label: 'Management',
     items: [
-      { to: '/admin/menu',  icon: BookOpen, label: 'Menu' },
-      { to: '/admin/staff', icon: Users,    label: 'Staff' },
+      { to: '/admin/menu',   icon: BookOpen, label: 'Menu' },
+      { to: '/admin/staff',  icon: Users,    label: 'Staff' },
+      { to: '/admin/themes', icon: Palette,  label: 'Themes' },
     ],
   },
   {
