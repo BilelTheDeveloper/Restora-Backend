@@ -19,7 +19,7 @@ export default function Login() {
     onSuccess: ({ data }) => {
       setAuth(data.user, data.token);
       toast.success(t('login.success'));
-      navigate('/admin');
+      navigate(data.user.role === 'superadmin' ? '/superadmin' : '/admin');
     },
     onError: (err) => toast.error(err.message),
   });

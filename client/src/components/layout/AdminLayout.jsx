@@ -248,7 +248,9 @@ export default function AdminLayout() {
   const location                    = useLocation();
 
   const verificationStatus = user?.verificationStatus ?? 'pending';
-  const isVerified         = verificationStatus === 'approved';
+  // Staff roles (cashier, waiter, etc.) don't go through KYC — treat them as verified
+  const isOwner    = user?.role === 'owner';
+  const isVerified = !isOwner || verificationStatus === 'approved';
 
   // Redirect unverified users away from locked routes
   useEffect(() => {
