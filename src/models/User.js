@@ -14,6 +14,12 @@ const userSchema = new mongoose.Schema(
       default: 'customer',
     },
     restaurant: { type: mongoose.Schema.Types.ObjectId, ref: 'Restaurant' },
+    verificationStatus: {
+      type: String,
+      enum: ['pending', 'under_review', 'approved', 'rejected'],
+      default: 'pending',
+    },
+    rejectionReason: { type: String },
     isActive: { type: Boolean, default: true },
     lastLogin: { type: Date },
   },

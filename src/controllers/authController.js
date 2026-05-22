@@ -15,7 +15,10 @@ export const register = async (req, res, next) => {
     const user = await User.create({ name, email, password, phone, role: 'owner' });
     const token = generateToken(user._id);
 
-    created(res, { user: { _id: user._id, name: user.name, email: user.email, role: user.role }, token });
+    created(res, {
+      user: { _id: user._id, name: user.name, email: user.email, role: user.role, verificationStatus: user.verificationStatus },
+      token,
+    });
   } catch (err) {
     next(err);
   }
@@ -40,7 +43,10 @@ export const login = async (req, res, next) => {
     await user.save({ validateBeforeSave: false });
 
     const token = generateToken(user._id);
-    success(res, { user: { _id: user._id, name: user.name, email: user.email, role: user.role, restaurant: user.restaurant }, token });
+    success(res, {
+      user: { _id: user._id, name: user.name, email: user.email, role: user.role, restaurant: user.restaurant, verificationStatus: user.verificationStatus },
+      token,
+    });
   } catch (err) {
     next(err);
   }
@@ -78,6 +84,28 @@ export const changePassword = async (req, res, next) => {
     user.password = newPassword;
     await user.save();
     success(res, null, 'Password updated successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const submitKYC = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (user.verificationStatus === 'approved') {
+      return success(res, { verificationStatus: 'approved' }, 'Already verified');
+    }
+    await User.findByIdAndUpdate(req.user._id, { verificationStatus: 'under_review' });
+    success(res, { verificationStatus: 'under_review' }, 'KYC submitted — under review');
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getVerificationStatus = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id).select('verificationStatus rejectionReason');
+    success(res, { verificationStatus: user.verificationStatus, rejectionReason: user.rejectionReason });
   } catch (err) {
     next(err);
   }

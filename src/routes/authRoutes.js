@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { register, login, getMe, updateProfile, changePassword } from '../controllers/authController.js';
+import { register, login, getMe, updateProfile, changePassword, submitKYC, getVerificationStatus } from '../controllers/authController.js';
 import { protect } from '../middleware/auth.js';
 import { authLimiter } from '../middleware/security.js';
 
@@ -10,5 +10,7 @@ router.post('/login', authLimiter, login);
 router.get('/me', protect, getMe);
 router.put('/me', protect, updateProfile);
 router.put('/change-password', protect, changePassword);
+router.put('/kyc-submit', protect, submitKYC);
+router.get('/kyc-status', protect, getVerificationStatus);
 
 export default router;
