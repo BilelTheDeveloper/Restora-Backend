@@ -95,7 +95,11 @@ export const submitKYC = async (req, res, next) => {
     if (user.verificationStatus === 'approved') {
       return success(res, { verificationStatus: 'approved' }, 'Already verified');
     }
-    await User.findByIdAndUpdate(req.user._id, { verificationStatus: 'under_review' });
+    const { documentType, documentFront, documentBack, selfies, fullName, nationalId, taxNumber, businessReg } = req.body;
+    await User.findByIdAndUpdate(req.user._id, {
+      verificationStatus: 'under_review',
+      kycData: { documentType, documentFront, documentBack, selfies, fullName, nationalId, taxNumber, businessReg },
+    });
     success(res, { verificationStatus: 'under_review' }, 'KYC submitted — under review');
   } catch (err) {
     next(err);

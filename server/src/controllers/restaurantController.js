@@ -2,6 +2,7 @@ import Restaurant from '../models/Restaurant.js';
 import User from '../models/User.js';
 import { success, created, paginated } from '../utils/apiResponse.js';
 
+
 export const createRestaurant = async (req, res, next) => {
   try {
     const existing = await Restaurant.findOne({ owner: req.user._id });
@@ -53,6 +54,35 @@ export const updateRestaurant = async (req, res, next) => {
       return next(new Error('Restaurant not found'));
     }
     success(res, restaurant);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const upsertMyRestaurant = async (req, res, next) => {
+  try {
+    const existing = await Restaurant.findOne({ owner: req.user._id });
+
+    if (existing) {
+      const updated = await Restaurant.findOneAndUpdate(
+        { owner: req.user._id },
+        { $set: req.body },
+        { new: true, runValidators: true }
+      );
+      return success(res, updated, 'Restaurant updated');
+    }
+
+    // Create — generate slug from name
+    const base = (req.body.name || 'restaurant')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+    const slugExists = await Restaurant.findOne({ slug: base });
+    const slug = slugExists ? `${base}-${Date.now()}` : base;
+
+    const restaurant = await Restaurant.create({ ...req.body, slug, owner: req.user._id });
+    await User.findByIdAndUpdate(req.user._id, { restaurant: restaurant._id });
+    created(res, restaurant, 'Restaurant created');
   } catch (err) {
     next(err);
   }

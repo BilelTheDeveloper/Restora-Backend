@@ -3,6 +3,7 @@ import {
   createRestaurant,
   getMyRestaurant,
   updateRestaurant,
+  upsertMyRestaurant,
   getPublicRestaurants,
   getPublicRestaurantBySlug,
 } from '../controllers/restaurantController.js';
@@ -18,5 +19,6 @@ router.get('/:slug', getPublicRestaurantBySlug);
 router.post('/', protect, createRestaurant);
 router.get('/admin/mine', protect, authorize('owner', 'manager', 'superadmin'), getMyRestaurant);
 router.put('/admin/mine', protect, authorize('owner', 'superadmin'), updateRestaurant);
+router.put('/admin/setup', protect, upsertMyRestaurant);
 
 export default router;
