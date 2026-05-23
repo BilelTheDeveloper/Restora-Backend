@@ -2,6 +2,18 @@ import Restaurant from '../models/Restaurant.js';
 import User from '../models/User.js';
 import { success, created, paginated } from '../utils/apiResponse.js';
 
+// Whitelisted fields for restaurant create/update (prevents mass assignment)
+const ALLOWED_FIELDS = [
+  'name', 'description', 'cuisine', 'address', 'contact',
+  'settings', 'logo', 'coverImage', 'socialMedia', 'isHalal',
+  'tags', 'priceRange', 'openingHours',
+];
+
+const pickAllowed = (body) =>
+  Object.fromEntries(Object.entries(body).filter(([k]) => ALLOWED_FIELDS.includes(k)));
+
+// Escape regex special chars to prevent ReDoS
+const escRe = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 export const createRestaurant = async (req, res, next) => {
   try {
@@ -11,7 +23,8 @@ export const createRestaurant = async (req, res, next) => {
       return next(new Error('You already own a restaurant'));
     }
 
-    const slug = req.body.name
+    const data = pickAllowed(req.body);
+    const slug = (data.name || '')
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '');
@@ -19,7 +32,7 @@ export const createRestaurant = async (req, res, next) => {
     const slugExists = await Restaurant.findOne({ slug });
     const finalSlug = slugExists ? `${slug}-${Date.now()}` : slug;
 
-    const restaurant = await Restaurant.create({ ...req.body, slug: finalSlug, owner: req.user._id });
+    const restaurant = await Restaurant.create({ ...data, slug: finalSlug, owner: req.user._id });
 
     await User.findByIdAndUpdate(req.user._id, { restaurant: restaurant._id, role: 'owner' });
 
@@ -44,9 +57,10 @@ export const getMyRestaurant = async (req, res, next) => {
 
 export const updateRestaurant = async (req, res, next) => {
   try {
+    const update = pickAllowed(req.body);
     const restaurant = await Restaurant.findOneAndUpdate(
       { owner: req.user._id },
-      req.body,
+      update,
       { new: true, runValidators: true }
     );
     if (!restaurant) {
@@ -61,26 +75,27 @@ export const updateRestaurant = async (req, res, next) => {
 
 export const upsertMyRestaurant = async (req, res, next) => {
   try {
+    const data = pickAllowed(req.body);
     const existing = await Restaurant.findOne({ owner: req.user._id });
 
     if (existing) {
       const updated = await Restaurant.findOneAndUpdate(
         { owner: req.user._id },
-        { $set: req.body },
+        { $set: data },
         { new: true, runValidators: true }
       );
       return success(res, updated, 'Restaurant updated');
     }
 
     // Create — generate slug from name
-    const base = (req.body.name || 'restaurant')
+    const base = (data.name || 'restaurant')
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '');
     const slugExists = await Restaurant.findOne({ slug: base });
     const slug = slugExists ? `${base}-${Date.now()}` : base;
 
-    const restaurant = await Restaurant.create({ ...req.body, slug, owner: req.user._id });
+    const restaurant = await Restaurant.create({ ...data, slug, owner: req.user._id });
     await User.findByIdAndUpdate(req.user._id, { restaurant: restaurant._id });
     created(res, restaurant, 'Restaurant created');
   } catch (err) {
@@ -94,18 +109,19 @@ export const getPublicRestaurants = async (req, res, next) => {
     const { city, cuisine, halal, delivery, search, page = 1, limit = 12 } = req.query;
     const query = { isActive: true, isVerified: true };
 
-    if (city) query['address.city'] = new RegExp(city, 'i');
-    if (cuisine) query.cuisine = { $in: [new RegExp(cuisine, 'i')] };
+    // Escape user input before using in RegExp (prevents ReDoS)
+    if (city)    query['address.city'] = new RegExp(escRe(city), 'i');
+    if (cuisine) query.cuisine = { $in: [new RegExp(escRe(cuisine), 'i')] };
+    if (search)  query.name = new RegExp(escRe(search), 'i');
     if (halal === 'true') query.isHalal = true;
     if (delivery === 'true') query['settings.acceptsDelivery'] = true;
-    if (search) query.name = new RegExp(search, 'i');
 
     const total = await Restaurant.countDocuments(query);
     const restaurants = await Restaurant.find(query)
       .select('name slug logo coverImage cuisine address rating reviewCount settings isHalal')
       .sort({ rating: -1 })
       .skip((page - 1) * limit)
-      .limit(Number(limit));
+      .limit(Math.min(Number(limit), 50)); // cap at 50
 
     paginated(res, restaurants, {
       total,
