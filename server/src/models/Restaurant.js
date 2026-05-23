@@ -100,6 +100,21 @@ const restaurantSchema = new mongoose.Schema(
       enabled:     { type: Boolean, default: false },
       description: { type: String, default: '' },
       minSpend:    { type: Number, default: 0 },
+      zones: [{
+        id:    { type: String },
+        label: { type: String, default: '' },
+        color: { type: String, default: '#f59e0b' },
+        x:     { type: Number },
+        y:     { type: Number },
+        w:     { type: Number },
+        h:     { type: Number },
+      }],
+      room: {
+        x: { type: Number, default: 40 },
+        y: { type: Number, default: 40 },
+        w: { type: Number, default: 820 },
+        h: { type: Number, default: 520 },
+      },
     },
 
     isPublished: { type: Boolean, default: false },

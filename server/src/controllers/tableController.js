@@ -18,14 +18,30 @@ export const createTable = async (req, res, next) => {
   try {
     const restaurant = await Restaurant.findOne({ owner: req.user._id }).select('_id');
     if (!restaurant) { res.status(404); return next(new Error('Restaurant not found')); }
-    const { number, capacity, shape, position, floor } = req.body;
+    const { capacity, shape, position, floor } = req.body;
+    let { number } = req.body;
+
+    // Resolve duplicate table numbers gracefully
+    if (number) {
+      const conflict = await Table.findOne({ restaurant: restaurant._id, number });
+      if (conflict) {
+        let n = (await Table.countDocuments({ restaurant: restaurant._id })) + 1;
+        while (await Table.findOne({ restaurant: restaurant._id, number: String(n) })) n++;
+        number = String(n);
+      }
+    } else {
+      let n = (await Table.countDocuments({ restaurant: restaurant._id })) + 1;
+      while (await Table.findOne({ restaurant: restaurant._id, number: String(n) })) n++;
+      number = String(n);
+    }
+
     const table = await Table.create({
       restaurant: restaurant._id,
-      number: number || String(await Table.countDocuments({ restaurant: restaurant._id }) + 1),
+      number,
       capacity: capacity ?? 4,
-      shape: shape ?? 'round',
+      shape:    shape    ?? 'round',
       position: position ?? { x: 200, y: 200 },
-      floor: floor ?? 'main',
+      floor:    floor    ?? 'main',
     });
     created(res, table);
   } catch (err) { next(err); }
@@ -58,15 +74,21 @@ export const deleteTable = async (req, res, next) => {
 };
 
 // ── Public: get tables for a restaurant (VIP booking) ───────
+// Note: isPublished is NOT required here — the page layer handles that.
+// We only require isActive + vipService.enabled so previews and staging work.
 export const getPublicTables = async (req, res, next) => {
   try {
-    const restaurant = await Restaurant.findOne({ slug: req.params.slug, isActive: true, isPublished: true })
+    const restaurant = await Restaurant.findOne({ slug: req.params.slug, isActive: true })
       .select('_id vipService');
-    if (!restaurant?.vipService?.enabled) return success(res, []);
+    if (!restaurant?.vipService?.enabled) return success(res, { tables: [], zones: [], room: null });
     const tables = await Table.find({ restaurant: restaurant._id, isActive: true })
       .select('number capacity shape position floor')
       .sort('number');
-    success(res, tables);
+    success(res, {
+      tables,
+      zones: restaurant.vipService.zones ?? [],
+      room:  restaurant.vipService.room  ?? null,
+    });
   } catch (err) { next(err); }
 };
 
