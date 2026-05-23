@@ -421,13 +421,13 @@ export default function VIPSetup() {
   // ── Server data ──────────────────────────────────────────────
   const { data: rd } = useQuery({
     queryKey: ['my-restaurant'],
-    queryFn: () => api.get('/restaurants/admin/mine').then(r => r.data),
+    queryFn: () => api.get('/restaurants/admin/mine'),
   });
   const restaurant = rd?.data;
 
   const { data: tablesData, isLoading: tablesLoading } = useQuery({
     queryKey: ['my-tables'],
-    queryFn: () => api.get('/owner/tables').then(r => r.data.data ?? []),
+    queryFn: () => api.get('/owner/tables').then(r => r.data ?? []),
     enabled: !!restaurant,
   });
 
