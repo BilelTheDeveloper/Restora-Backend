@@ -74,9 +74,11 @@ export const deleteTable = async (req, res, next) => {
 };
 
 // ── Public: get tables for a restaurant (VIP booking) ───────
+// Note: isPublished is NOT required here — the page layer handles that.
+// We only require isActive + vipService.enabled so previews and staging work.
 export const getPublicTables = async (req, res, next) => {
   try {
-    const restaurant = await Restaurant.findOne({ slug: req.params.slug, isActive: true, isPublished: true })
+    const restaurant = await Restaurant.findOne({ slug: req.params.slug, isActive: true })
       .select('_id vipService');
     if (!restaurant?.vipService?.enabled) return success(res, { tables: [], zones: [], room: null });
     const tables = await Table.find({ restaurant: restaurant._id, isActive: true })
