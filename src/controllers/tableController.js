@@ -62,11 +62,15 @@ export const getPublicTables = async (req, res, next) => {
   try {
     const restaurant = await Restaurant.findOne({ slug: req.params.slug, isActive: true, isPublished: true })
       .select('_id vipService');
-    if (!restaurant?.vipService?.enabled) return success(res, []);
+    if (!restaurant?.vipService?.enabled) return success(res, { tables: [], zones: [], room: null });
     const tables = await Table.find({ restaurant: restaurant._id, isActive: true })
       .select('number capacity shape position floor')
       .sort('number');
-    success(res, tables);
+    success(res, {
+      tables,
+      zones: restaurant.vipService.zones ?? [],
+      room:  restaurant.vipService.room  ?? null,
+    });
   } catch (err) { next(err); }
 };
 
