@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useAuthStore } from './store/authStore';
+import { useAuthStore, getAccessToken, setAccessToken } from './store/authStore';
+import { authService } from './services/authService';
 import { adminService } from './services/adminService';
 
 // Public layouts & pages
@@ -38,29 +40,50 @@ import SecurityCenter from './pages/superadmin/SecurityCenter';
 
 const STAFF_ROLES = ['manager', 'cashier', 'waiter', 'kitchen', 'driver'];
 
+// ── Silent auth hook ───────────────────────────────────────
+// On every page load, if we have a persisted user profile, try to get a
+// fresh access token via the httpOnly refresh cookie. This is invisible
+// to the user — they stay logged in across hard refreshes.
+function useSilentRefresh() {
+  const { user, logout } = useAuthStore();
+  const [ready, setReady] = useState(!!getAccessToken()); // already logged in this session
+
+  useEffect(() => {
+    if (ready) return; // already have a token in memory, nothing to do
+    if (!user) { setReady(true); return; } // no persisted user — skip
+
+    authService.refresh()
+      .then(r => {
+        const token = r?.data?.accessToken;
+        if (token) setAccessToken(token);
+        else logout();
+      })
+      .catch(() => logout())
+      .finally(() => setReady(true));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return ready;
+}
+
 function RoleRedirect() {
-  const { user, token } = useAuthStore();
-  if (!token) return <Navigate to="/login" replace />;
+  const { user } = useAuthStore();
+  if (!getAccessToken()) return <Navigate to="/login" replace />;
   if (user?.role === 'superadmin') return <Navigate to="/superadmin" replace />;
   return <Navigate to="/admin" replace />;
 }
 
 function ProtectedRoute({ children, allowedRoles }) {
-  const { user, token } = useAuthStore();
-  if (!token) return <Navigate to="/login" replace />;
+  const { user } = useAuthStore();
+  if (!getAccessToken()) return <Navigate to="/login" replace />;
   if (allowedRoles && !allowedRoles.includes(user?.role)) return <Navigate to="/" replace />;
   return children;
 }
 
-// Blocks the app with the maintenance page when maintenance mode is on,
-// except for superadmins and the login/superadmin paths.
 function MaintenanceGuard({ children, status }) {
   const { user } = useAuthStore();
   const { pathname } = useLocation();
-
   const isSuperAdminZone = pathname.startsWith('/superadmin') || pathname === '/login';
   const isMaintenance    = status?.maintenanceMode && user?.role !== 'superadmin';
-
   if (isMaintenance && !isSuperAdminZone) {
     return <Maintenance message={status?.message} scheduledUntil={status?.scheduledUntil} />;
   }
@@ -68,6 +91,8 @@ function MaintenanceGuard({ children, status }) {
 }
 
 export default function App() {
+  const ready = useSilentRefresh();
+
   const { data: statusData } = useQuery({
     queryKey: ['app-status'],
     queryFn:  () => adminService.getStatus().then(r => r.data),
@@ -76,11 +101,19 @@ export default function App() {
     staleTime: 10_000,
   });
 
-  const appStatus = statusData;
+  // Wait for the silent refresh attempt before rendering protected routes
+  // so we don't flash a login redirect while the token is being restored.
+  if (!ready) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-[#0a0a0a]">
+        <div className="w-8 h-8 rounded-full border-2 border-orange-500 border-t-transparent animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <BrowserRouter>
-      <MaintenanceGuard status={appStatus}>
+      <MaintenanceGuard status={statusData}>
         <Routes>
           {/* Public */}
           <Route element={<PublicLayout />}>
@@ -106,10 +139,10 @@ export default function App() {
               </ProtectedRoute>
             }
           >
-            <Route index                  element={<SuperAdminDashboard />} />
-            <Route path="kyc-queue"       element={<KYCQueue />} />
-            <Route path="restaurants"     element={<Restaurants />} />
-            <Route path="security"        element={<SecurityCenter />} />
+            <Route index              element={<SuperAdminDashboard />} />
+            <Route path="kyc-queue"   element={<KYCQueue />} />
+            <Route path="restaurants" element={<Restaurants />} />
+            <Route path="security"    element={<SecurityCenter />} />
           </Route>
 
           {/* ── Restaurant OS (owner + staff) ── */}

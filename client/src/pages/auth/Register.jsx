@@ -47,7 +47,7 @@ export default function Register() {
   const { mutate, isPending } = useMutation({
     mutationFn: authService.register,
     onSuccess: ({ data }) => {
-      setAuth(data.user, data.token);
+      setAuth(data.user, data.accessToken);
       toast.success(t('register.success'));
       navigate('/admin');
     },

@@ -3,6 +3,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/authStore';
 import { adminService } from '../../services/adminService';
+import { authService } from '../../services/authService';
 import { Avatar, ThemeToggle } from '../ui';
 import toast from 'react-hot-toast';
 import {
@@ -187,7 +188,11 @@ export default function SuperAdminLayout() {
   });
   const isMaintenanceOn = maintData?.enabled ?? false;
 
-  const handleLogout = () => { logout(); navigate('/login'); };
+  const handleLogout = async () => {
+    try { await authService.logout(); } catch { /* ignore */ }
+    logout();
+    navigate('/login');
+  };
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-[#0a0a0a] overflow-hidden">

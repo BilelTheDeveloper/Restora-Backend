@@ -17,7 +17,7 @@ export default function Login() {
   const { mutate, isPending } = useMutation({
     mutationFn: authService.login,
     onSuccess: ({ data }) => {
-      setAuth(data.user, data.token);
+      setAuth(data.user, data.accessToken);
       toast.success(t('login.success'));
       navigate(data.user.role === 'superadmin' ? '/superadmin' : '/admin');
     },

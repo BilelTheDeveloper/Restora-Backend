@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
+import { authService } from '../../services/authService';
 import { ThemeToggle, LanguageSwitcher, Avatar } from '../ui';
 import {
   LayoutDashboard, ShoppingCart, Grid3X3, ChefHat,
@@ -261,7 +262,11 @@ export default function AdminLayout() {
     }
   }, [isVerified, location.pathname, navigate]);
 
-  const handleLogout = () => { logout(); navigate('/login'); };
+  const handleLogout = async () => {
+    try { await authService.logout(); } catch { /* ignore */ }
+    logout();
+    navigate('/login');
+  };
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-[#0a0a0a] overflow-hidden">
