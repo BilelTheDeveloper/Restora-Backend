@@ -5,14 +5,25 @@ import {
   Palette, Eye, Sliders, CheckCircle2, ArrowLeft, Save,
   Type, Image as ImageIcon, LayoutTemplate, Sparkles,
   ToggleRight, ToggleLeft, Camera, ExternalLink, RefreshCw,
+  Globe, GlobeLock, Crown, AlertTriangle,
 } from 'lucide-react';
 import { restaurantService } from '../../services/restaurantService';
-import TemplateClassic from '../public/templates/TemplateClassic';
-import TemplateModern  from '../public/templates/TemplateModern';
-import TemplateVivid   from '../public/templates/TemplateVivid';
+import TemplateClassic  from '../public/templates/TemplateClassic';
+import TemplateModern   from '../public/templates/TemplateModern';
+import TemplateVivid    from '../public/templates/TemplateVivid';
+import TemplatePrestige from '../public/templates/TemplatePrestige';
 
 // ─── Template registry ─────────────────────────────────────
 const TEMPLATES = [
+  {
+    id: 'prestige',
+    name: 'Prestige',
+    tag: 'Ultra',
+    tagColor: 'text-amber-500 bg-amber-500/10',
+    desc: 'Cinematic noir. Massive typography, gold accents, full floor-plan VIP flow.',
+    Component: TemplatePrestige,
+    thumb: PrestigeThumb,
+  },
   {
     id: 'classic',
     name: 'Classic',
@@ -147,6 +158,35 @@ function VividThumb({ active }) {
   );
 }
 
+function PrestigeThumb({ active }) {
+  return (
+    <div className={`w-full h-48 rounded-xl overflow-hidden border-2 transition-all ${active ? 'border-orange-500' : 'border-gray-200 dark:border-white/10'}`}
+         style={{ background: '#090909' }}>
+      <div className="h-7 flex items-center px-3 gap-2 border-b border-white/5">
+        <div className="w-5 h-5 rounded-md bg-orange-500/20 flex items-center justify-center"><div className="w-1.5 h-1.5 rounded-sm bg-orange-500" /></div>
+        <div className="h-2 w-14 rounded-full bg-white/60" />
+        <div className="flex-1" />
+        <div className="h-5 w-16 rounded-lg bg-orange-500/80" />
+      </div>
+      <div className="relative h-24 flex flex-col justify-end px-3 pb-2" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0.3))' }}>
+        <div className="absolute inset-0 bg-white/3" />
+        <div className="h-0.5 w-6 bg-orange-500 rounded-full mb-1.5" />
+        <div className="h-4 w-28 bg-white rounded-full mb-1" />
+        <div className="h-1.5 w-20 bg-white/30 rounded-full mb-2.5" />
+        <div className="flex gap-1.5">
+          <div className="h-5 w-20 rounded-xl border border-white/30" />
+          <div className="h-5 w-20 rounded-xl bg-orange-500" />
+        </div>
+      </div>
+      <div className="px-3 pt-1.5 grid grid-cols-4 gap-1">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="h-4 bg-white/5 rounded-lg border border-white/5" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Image resize helper ────────────────────────────────────
 const resizeToBase64 = (file, maxW = 1200, q = 0.82) =>
   new Promise(resolve => {
@@ -190,7 +230,7 @@ function Toggle({ label, value, onChange }) {
       <span>{label}</span>
       {value
         ? <ToggleRight size={20} className="text-orange-500" />
-        : <ToggleLeft  size={20} className="text-gray-300 dark:text-white/20" />
+        : <ToggleLeft  size={20} className="text-gray-500 dark:text-gray-400" />
       }
     </button>
   );
@@ -209,6 +249,8 @@ const defaultConfig = (restaurant) => ({
   showAbout:      restaurant?.template?.showAbout      ?? true,
   showHours:      restaurant?.template?.showHours      ?? false,
   ctaText:        restaurant?.template?.ctaText        ?? 'Reserve a Table',
+  discoverText:   restaurant?.template?.discoverText   ?? 'Discover More',
+  vipCtaText:     restaurant?.template?.vipCtaText     ?? 'Book VIP Table',
 });
 
 // ─── Main Themes page ───────────────────────────────────────
@@ -243,6 +285,18 @@ export default function Themes() {
     onError: () => toast.error('Save failed — please try again'),
   });
 
+  const { mutate: togglePublish, isPending: publishing } = useMutation({
+    mutationFn: (val) => restaurantService.update({ isPublished: val }),
+    onSuccess: (_, val) => {
+      qc.invalidateQueries({ queryKey: ['my-restaurant'] });
+      toast.success(val ? 'Website published! 🎉' : 'Website unpublished');
+    },
+    onError: () => toast.error('Failed to update publish status'),
+  });
+
+  const hasMenu = restaurant?.menu?.some(c => c.items?.length > 0);
+  const isPublished = restaurant?.isPublished ?? false;
+
   const openCustomize = (id) => {
     setSelTpl(id);
     setConfig(p => ({ ...p, id }));
@@ -260,8 +314,10 @@ export default function Themes() {
   const previewRestaurant = restaurant ? {
     ...restaurant,
     ...config,
+    slug:           restaurant.slug,
     coverImage:     restaurant.coverImage,
     heroBackground: config.heroBackground ?? restaurant.coverImage,
+    vipService:     restaurant.vipService,
   } : null;
 
   const PreviewComponent = TEMPLATES.find(t => t.id === (selTpl ?? config.id))?.Component;
@@ -300,14 +356,51 @@ export default function Themes() {
           </div>
         )}
 
+        {/* Publish panel */}
+        {restaurant && (
+          <div className={`flex items-center gap-4 p-4 rounded-2xl border ${isPublished ? 'bg-emerald-50 dark:bg-emerald-500/8 border-emerald-200 dark:border-emerald-500/20' : 'bg-gray-50 dark:bg-white/3 border-gray-200 dark:border-white/8'}`}>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-0.5">
+                {isPublished
+                  ? <Globe size={14} className="text-emerald-500" />
+                  : <GlobeLock size={14} className="text-gray-400" />
+                }
+                <p className="text-xs font-bold text-gray-900 dark:text-white">
+                  {isPublished ? 'Your website is live' : 'Website not published'}
+                </p>
+              </div>
+              <p className="text-[10px] text-gray-400 truncate">
+                {isPublished && restaurant.slug
+                  ? `restora.app/r/${restaurant.slug}`
+                  : 'Publish to make your website visible to guests'}
+              </p>
+              {!hasMenu && (
+                <div className="flex items-center gap-1.5 mt-1.5 text-[10px] text-amber-500">
+                  <AlertTriangle size={10} /> Menu required before publishing —{' '}
+                  <a href="/admin/menu" className="underline hover:text-amber-600">Add menu items</a>
+                </div>
+              )}
+            </div>
+            <button
+              onClick={() => hasMenu && togglePublish(!isPublished)}
+              disabled={publishing || (!hasMenu && !isPublished)}
+              title={!hasMenu && !isPublished ? 'Add menu items first' : undefined}
+              className={`shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${isPublished ? 'bg-red-50 dark:bg-red-500/10 text-red-500 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20 border border-red-200 dark:border-red-500/20' : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm shadow-emerald-500/20'}`}
+            >
+              {publishing ? <RefreshCw size={12} className="animate-spin" /> : isPublished ? <GlobeLock size={12} /> : <Globe size={12} />}
+              {isPublished ? 'Unpublish' : 'Publish Website'}
+            </button>
+          </div>
+        )}
+
         {isLoading ? (
-          <div className="grid sm:grid-cols-3 gap-6">
-            {[...Array(3)].map((_, i) => (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {[...Array(4)].map((_, i) => (
               <div key={i} className="h-72 rounded-2xl bg-gray-100 dark:bg-white/5 animate-pulse" />
             ))}
           </div>
         ) : (
-          <div className="grid sm:grid-cols-3 gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {TEMPLATES.map(tpl => {
               const Thumb  = tpl.thumb;
               const active = activeTplId === tpl.id;
@@ -431,7 +524,7 @@ export default function Themes() {
 
           {/* Identity */}
           <div className="space-y-3">
-            <p className="text-[9px] font-bold uppercase tracking-widest text-gray-300 dark:text-white/20 flex items-center gap-1.5">
+            <p className="text-[9px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
               <Type size={10} /> Identity
             </p>
             <FormField label="Slogan / Tagline">
@@ -455,11 +548,36 @@ export default function Themes() {
                 placeholder="Reserve a Table"
               />
             </FormField>
+            <FormField label="Discover More Button">
+              <FormInput
+                value={config.discoverText}
+                onChange={e => setC('discoverText', e.target.value)}
+                placeholder="Discover More"
+              />
+            </FormField>
+            <FormField label="VIP Button Text">
+              <FormInput
+                value={config.vipCtaText}
+                onChange={e => setC('vipCtaText', e.target.value)}
+                placeholder="Book VIP Table"
+              />
+            </FormField>
+          </div>
+
+          {/* VIP Service */}
+          <div className="space-y-2">
+            <p className="text-[9px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
+              <Crown size={10} /> VIP Booking
+            </p>
+            <p className="text-[10px] text-gray-400 leading-relaxed">
+              Enable to show "Book VIP Table" button. Manage tables in{' '}
+              <a href="/admin/vip-setup" className="text-orange-500 hover:underline">VIP Setup</a>.
+            </p>
           </div>
 
           {/* Visuals */}
           <div className="space-y-3">
-            <p className="text-[9px] font-bold uppercase tracking-widest text-gray-300 dark:text-white/20 flex items-center gap-1.5">
+            <p className="text-[9px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
               <Sparkles size={10} /> Visual Style
             </p>
 
@@ -503,7 +621,7 @@ export default function Themes() {
 
           {/* Sections */}
           <div className="space-y-1">
-            <p className="text-[9px] font-bold uppercase tracking-widest text-gray-300 dark:text-white/20 mb-2 flex items-center gap-1.5">
+            <p className="text-[9px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-1.5">
               <LayoutTemplate size={10} /> Show Sections
             </p>
             <Toggle label="About / Our Story"  value={config.showAbout}   onChange={v => setC('showAbout',   v)} />
@@ -514,7 +632,7 @@ export default function Themes() {
 
           {/* Footer */}
           <div className="space-y-3">
-            <p className="text-[9px] font-bold uppercase tracking-widest text-gray-300 dark:text-white/20 flex items-center gap-1.5">
+            <p className="text-[9px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
               <ImageIcon size={10} /> Footer
             </p>
             <FormField label="Footer Text">

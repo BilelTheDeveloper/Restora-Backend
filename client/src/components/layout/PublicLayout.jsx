@@ -26,7 +26,7 @@ export default function PublicLayout() {
 
             {token ? (
               <div className="flex items-center gap-2">
-                <Link to="/admin">
+                <Link to={user?.role === 'superadmin' ? '/superadmin' : '/admin'}>
                   <Button variant="ghost" size="sm">{t('nav.dashboard')}</Button>
                 </Link>
                 <Avatar name={user?.name} size="sm" />

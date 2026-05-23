@@ -1,4 +1,8 @@
-import { MapPin, Phone, Clock, ExternalLink } from 'lucide-react';
+import { useState } from 'react';
+import { MapPin, Phone, Clock, ExternalLink, ChevronDown, Crown } from 'lucide-react';
+import VIPBookingModal from '../../../components/VIPBookingModal';
+
+const DAYS_ORDER = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
 
 function SocialLink({ href, children }) {
   if (!href) return null;
@@ -12,15 +16,24 @@ function SocialLink({ href, children }) {
 
 export default function TemplateClassic({ data }) {
   const {
-    name, slogan, badge, cuisine, coverImage, heroBackground, primaryColor = '#f97316',
+    name, slug, slogan, badge, cuisine, coverImage, heroBackground, primaryColor = '#f97316',
     about, menu, images, socialMedia, googleMapsLink,
     contact, address, openingHours, footerText, ctaText = 'Reserve a Table',
     showMenu = true, showGallery = true, showAbout = true, showHours = false,
+    vipService, discoverText = 'Discover More', vipCtaText = 'Book VIP Table',
     isHalal, rating, reviewCount,
   } = data;
 
+  const [showVIP, setShowVIP] = useState(false);
+
   const hero  = heroBackground || coverImage;
   const clr   = primaryColor;
+  const sortedHours = DAYS_ORDER.map(d => openingHours?.find(h => h.day === d)).filter(Boolean);
+
+  const handleDiscover = () => {
+    const id = showAbout ? 'about' : showMenu ? 'menu' : showGallery ? 'gallery' : 'footer-section';
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   return (
     <div className="font-sans bg-[#fafaf8] text-[#1c1917]">
@@ -71,17 +84,21 @@ export default function TemplateClassic({ data }) {
           {slogan && <p className="text-xl sm:text-2xl text-white/80 font-light max-w-xl">{slogan}</p>}
 
           <div className="flex flex-wrap gap-3 mt-10 justify-center">
+            <button onClick={handleDiscover}
+                    className="group flex items-center gap-2 px-7 py-3.5 rounded-full text-sm font-bold bg-white/15 backdrop-blur-sm text-white border border-white/30 hover:bg-white/25 transition-all">
+              {discoverText} <ChevronDown size={15} className="group-hover:translate-y-0.5 transition-transform" />
+            </button>
+            {vipService?.enabled && (
+              <button onClick={() => setShowVIP(true)}
+                      className="flex items-center gap-2 px-7 py-3.5 rounded-full text-sm font-bold text-white shadow-lg transition-all hover:scale-105 hover:shadow-xl"
+                      style={{ backgroundColor: clr }}>
+                <Crown size={15} /> {vipCtaText}
+              </button>
+            )}
             {contact?.phone && (
               <a href={`tel:${contact.phone}`}
-                 className="flex items-center gap-2 px-7 py-3.5 rounded-full text-sm font-bold text-white shadow-lg transition-all hover:scale-105 hover:shadow-xl"
-                 style={{ backgroundColor: clr }}>
+                 className="flex items-center gap-2 px-7 py-3.5 rounded-full text-sm font-bold bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-all">
                 <Phone size={15} /> {ctaText}
-              </a>
-            )}
-            {googleMapsLink && (
-              <a href={googleMapsLink} target="_blank" rel="noopener noreferrer"
-                 className="flex items-center gap-2 px-7 py-3.5 rounded-full text-sm font-bold bg-white/15 backdrop-blur-sm text-white border border-white/30 hover:bg-white/25 transition-all">
-                <MapPin size={15} /> Directions
               </a>
             )}
           </div>
@@ -236,17 +253,25 @@ export default function TemplateClassic({ data }) {
       )}
 
       {/* ── Footer ── */}
-      <footer className="py-12 text-white" style={{ backgroundColor: '#1c1917' }}>
+      <footer id="footer-section" className="py-12 text-white" style={{ backgroundColor: '#1c1917' }}>
         <div className="max-w-6xl mx-auto px-6">
-          <div className="grid md:grid-cols-3 gap-8 mb-8">
+          <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-8 mb-8">
             <div>
               <p className="text-2xl font-black mb-2" style={{ color: clr }}>{name}</p>
               {badge && <p className="text-sm text-white/50">{badge}</p>}
               {slogan && <p className="text-sm text-white/60 mt-2">{slogan}</p>}
+              {vipService?.enabled && (
+                <button onClick={() => setShowVIP(true)}
+                        className="mt-4 flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full transition-all hover:scale-105"
+                        style={{ backgroundColor: clr + '22', color: clr, border: `1px solid ${clr}40` }}>
+                  <Crown size={11} /> Book VIP Table
+                </button>
+              )}
             </div>
             <div>
               <p className="text-xs font-bold uppercase tracking-widest text-white/40 mb-3">Contact</p>
               {contact?.phone && <p className="text-sm text-white/70 mb-1">{contact.phone}</p>}
+              {contact?.email && <p className="text-sm text-white/70 mb-1 break-all">{contact.email}</p>}
               {address?.city && <p className="text-sm text-white/70">{address?.street && `${address.street}, `}{address.city}</p>}
               {googleMapsLink && (
                 <a href={googleMapsLink} target="_blank" rel="noopener noreferrer"
@@ -256,6 +281,23 @@ export default function TemplateClassic({ data }) {
                 </a>
               )}
             </div>
+            {sortedHours.length > 0 && (
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-white/40 mb-3 flex items-center gap-1.5">
+                  <Clock size={10} /> Hours
+                </p>
+                <div className="space-y-1.5">
+                  {sortedHours.map((h, i) => (
+                    <div key={i} className="flex justify-between text-xs gap-2">
+                      <span className="capitalize text-white/50">{h.day.slice(0,3)}</span>
+                      <span className={h.isClosed ? 'text-red-400/70' : 'text-white/60'}>
+                        {h.isClosed ? 'Closed' : `${h.open}–${h.close}`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <div>
               <p className="text-xs font-bold uppercase tracking-widest text-white/40 mb-3">Follow Us</p>
               <div className="flex gap-2">
@@ -271,6 +313,10 @@ export default function TemplateClassic({ data }) {
           </div>
         </div>
       </footer>
+
+      {showVIP && (
+        <VIPBookingModal slug={slug} restaurantName={name} primaryColor={clr} onClose={() => setShowVIP(false)} />
+      )}
     </div>
   );
 }

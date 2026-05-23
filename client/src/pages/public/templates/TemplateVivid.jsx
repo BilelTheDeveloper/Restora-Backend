@@ -1,4 +1,8 @@
-import { MapPin, Phone, ExternalLink, Star } from 'lucide-react';
+import { useState } from 'react';
+import { MapPin, Phone, ExternalLink, Star, ChevronDown, Crown, Clock } from 'lucide-react';
+import VIPBookingModal from '../../../components/VIPBookingModal';
+
+const DAYS_ORDER = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
 
 function hexToRgb(hex) {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -9,16 +13,24 @@ function hexToRgb(hex) {
 
 export default function TemplateVivid({ data }) {
   const {
-    name, slogan, badge, cuisine, coverImage, heroBackground, primaryColor = '#f97316',
+    name, slug, slogan, badge, cuisine, coverImage, heroBackground, primaryColor = '#f97316',
     about, menu, images, socialMedia, googleMapsLink,
     contact, address, openingHours, footerText, ctaText = 'Reserve a Table',
     showMenu = true, showGallery = true, showAbout = true, showHours = false,
+    vipService, discoverText = 'Discover More', vipCtaText = 'Book VIP Table',
     isHalal, rating, reviewCount,
   } = data;
 
+  const [showVIP, setShowVIP] = useState(false);
   const hero = heroBackground || coverImage;
   const clr  = primaryColor;
   const rgb  = hexToRgb(clr.startsWith('#') ? clr : '#f97316');
+  const sortedHours = DAYS_ORDER.map(d => openingHours?.find(h => h.day === d)).filter(Boolean);
+
+  const handleDiscover = () => {
+    const id = showAbout ? 'about' : showMenu ? 'menu' : showGallery ? 'gallery' : 'footer-vivid';
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   return (
     <div className="bg-[#fff8f4] text-[#1a0a00] font-sans">
@@ -84,18 +96,22 @@ export default function TemplateVivid({ data }) {
             )}
 
             <div className="flex flex-wrap gap-3">
+              <button onClick={handleDiscover}
+                      className="group flex items-center gap-2 px-7 py-3.5 rounded-2xl text-sm font-bold border-2 transition-all hover:scale-105"
+                      style={{ borderColor: clr, color: clr, backgroundColor: `rgba(${rgb},0.06)` }}>
+                {discoverText} <ChevronDown size={14} className="group-hover:translate-y-0.5 transition-transform" />
+              </button>
+              {vipService?.enabled && (
+                <button onClick={() => setShowVIP(true)}
+                        className="flex items-center gap-2 px-7 py-3.5 rounded-2xl text-sm font-black text-white shadow-lg transition-all hover:scale-105 hover:shadow-xl"
+                        style={{ backgroundColor: clr, boxShadow: `0 8px 24px rgba(${rgb},0.45)` }}>
+                  <Crown size={14} /> {vipCtaText}
+                </button>
+              )}
               {contact?.phone && (
                 <a href={`tel:${contact.phone}`}
-                   className="flex items-center gap-2 px-7 py-3.5 rounded-2xl text-sm font-black text-white shadow-lg transition-all hover:scale-105 hover:shadow-xl"
-                   style={{ backgroundColor: clr, boxShadow: `0 8px 24px rgba(${rgb},0.45)` }}>
-                  {ctaText}
-                </a>
-              )}
-              {googleMapsLink && (
-                <a href={googleMapsLink} target="_blank" rel="noopener noreferrer"
-                   className="flex items-center gap-2 px-7 py-3.5 rounded-2xl text-sm font-bold border-2 transition-all hover:scale-105"
-                   style={{ borderColor: clr, color: clr }}>
-                  <MapPin size={14} /> Find Us
+                   className="flex items-center gap-2 px-7 py-3.5 rounded-2xl text-sm font-bold text-gray-700 border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all">
+                  <Phone size={14} /> {ctaText}
                 </a>
               )}
             </div>
@@ -259,9 +275,9 @@ export default function TemplateVivid({ data }) {
       )}
 
       {/* ── Footer ── */}
-      <footer className="py-16 text-white" style={{ background: `linear-gradient(135deg, ${clr}, ${clr}cc)` }}>
+      <footer id="footer-vivid" className="py-16 text-white" style={{ background: `linear-gradient(135deg, ${clr}, ${clr}cc)` }}>
         <div className="max-w-6xl mx-auto px-6">
-          <div className="grid md:grid-cols-3 gap-10 mb-10">
+          <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-10 mb-10">
             <div>
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center font-black text-lg">
@@ -270,10 +286,17 @@ export default function TemplateVivid({ data }) {
                 <span className="font-black text-xl">{name}</span>
               </div>
               {slogan && <p className="text-sm text-white/70">{slogan}</p>}
+              {vipService?.enabled && (
+                <button onClick={() => setShowVIP(true)}
+                        className="mt-4 flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full bg-white/20 hover:bg-white/30 transition-colors">
+                  <Crown size={11} /> Book VIP Table
+                </button>
+              )}
             </div>
             <div>
               <p className="text-xs font-bold uppercase tracking-widest text-white/50 mb-3">Contact</p>
               {contact?.phone && <p className="text-sm text-white/80 mb-1">{contact.phone}</p>}
+              {contact?.email && <p className="text-sm text-white/70 mb-1 break-all">{contact.email}</p>}
               {address?.city && <p className="text-sm text-white/80">{address.street && `${address.street}, `}{address.city}</p>}
               {googleMapsLink && (
                 <a href={googleMapsLink} target="_blank" rel="noopener noreferrer"
@@ -282,6 +305,23 @@ export default function TemplateVivid({ data }) {
                 </a>
               )}
             </div>
+            {sortedHours.length > 0 && (
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-white/50 mb-3 flex items-center gap-1.5">
+                  <Clock size={10} /> Hours
+                </p>
+                <div className="space-y-1.5">
+                  {sortedHours.map((h, i) => (
+                    <div key={i} className="flex justify-between text-xs gap-2">
+                      <span className="capitalize text-white/60">{h.day.slice(0,3)}</span>
+                      <span className={h.isClosed ? 'text-red-200/70' : 'text-white/80'}>
+                        {h.isClosed ? 'Closed' : `${h.open}–${h.close}`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <div>
               <p className="text-xs font-bold uppercase tracking-widest text-white/50 mb-3">Social</p>
               <div className="flex gap-2">
@@ -306,6 +346,10 @@ export default function TemplateVivid({ data }) {
           </div>
         </div>
       </footer>
+
+      {showVIP && (
+        <VIPBookingModal slug={slug} restaurantName={name} primaryColor={clr} onClose={() => setShowVIP(false)} />
+      )}
     </div>
   );
 }

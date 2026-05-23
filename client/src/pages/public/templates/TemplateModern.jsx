@@ -1,16 +1,28 @@
-import { MapPin, Phone, ExternalLink, ArrowRight } from 'lucide-react';
+import { useState } from 'react';
+import { MapPin, Phone, ExternalLink, ArrowRight, ChevronDown, Crown, Clock } from 'lucide-react';
+import VIPBookingModal from '../../../components/VIPBookingModal';
+
+const DAYS_ORDER = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
 
 export default function TemplateModern({ data }) {
   const {
-    name, slogan, badge, cuisine, coverImage, heroBackground, primaryColor = '#f97316',
+    name, slug, slogan, badge, cuisine, coverImage, heroBackground, primaryColor = '#f97316',
     about, menu, images, socialMedia, googleMapsLink,
     contact, address, openingHours, footerText, ctaText = 'Reserve a Table',
     showMenu = true, showGallery = true, showAbout = true, showHours = false,
+    vipService, discoverText = 'Discover More', vipCtaText = 'Book VIP Table',
     isHalal, rating, reviewCount,
   } = data;
 
+  const [showVIP, setShowVIP] = useState(false);
   const hero = heroBackground || coverImage;
   const clr  = primaryColor;
+  const sortedHours = DAYS_ORDER.map(d => openingHours?.find(h => h.day === d)).filter(Boolean);
+
+  const handleDiscover = () => {
+    const id = showAbout ? 'about' : showMenu ? 'menu' : showGallery ? 'gallery' : 'footer-modern';
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   return (
     <div className="bg-[#0c0c0c] text-white min-h-screen font-sans">
@@ -57,16 +69,27 @@ export default function TemplateModern({ data }) {
               <p className="text-lg md:text-2xl text-white/60 font-light max-w-2xl leading-relaxed mb-10">{slogan}</p>
             )}
             <div className="flex flex-wrap gap-4 items-center">
+              <button onClick={handleDiscover}
+                      className="group flex items-center gap-3 px-8 py-4 rounded-full text-sm font-bold text-white/70 border border-white/25 hover:text-white hover:border-white/50 hover:bg-white/5 transition-all">
+                {discoverText} <ChevronDown size={15} className="group-hover:translate-y-0.5 transition-transform" />
+              </button>
+              {vipService?.enabled && (
+                <button onClick={() => setShowVIP(true)}
+                        className="flex items-center gap-3 px-8 py-4 rounded-full text-sm font-black tracking-wider uppercase text-black transition-all hover:scale-105 hover:shadow-2xl"
+                        style={{ backgroundColor: clr, boxShadow: `0 0 40px ${clr}55` }}>
+                  <Crown size={15} /> {vipCtaText}
+                </button>
+              )}
               {contact?.phone && (
                 <a href={`tel:${contact.phone}`}
-                   className="flex items-center gap-3 px-8 py-4 rounded-full text-sm font-black tracking-wider uppercase text-black transition-all hover:scale-105 hover:shadow-2xl"
-                   style={{ backgroundColor: clr, boxShadow: `0 0 40px ${clr}55` }}>
-                  {ctaText} <ArrowRight size={15} />
+                   className="flex items-center gap-2 text-sm text-white/50 hover:text-white/80 transition-colors">
+                  <Phone size={14} />
+                  <span className="underline underline-offset-4">{ctaText}</span>
                 </a>
               )}
               {googleMapsLink && (
                 <a href={googleMapsLink} target="_blank" rel="noopener noreferrer"
-                   className="flex items-center gap-2 text-sm text-white/50 hover:text-white/80 transition-colors">
+                   className="flex items-center gap-2 text-sm text-white/40 hover:text-white/70 transition-colors">
                   <MapPin size={14} />
                   <span className="underline underline-offset-4">Get Directions</span>
                 </a>
@@ -218,31 +241,78 @@ export default function TemplateModern({ data }) {
       )}
 
       {/* ── Footer ── */}
-      <footer className="border-t border-white/8 py-12">
-        <div className="max-w-6xl mx-auto px-8 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div>
-            <p className="text-lg font-black tracking-widest uppercase">{name}</p>
-            {(footerText) && <p className="text-xs text-white/30 mt-1">{footerText}</p>}
+      <footer id="footer-modern" className="border-t border-white/8 pt-14 pb-8">
+        <div className="max-w-6xl mx-auto px-8">
+          <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-8 mb-10">
+            <div>
+              <p className="text-lg font-black tracking-widest uppercase mb-2">{name}</p>
+              {slogan && <p className="text-xs text-white/30 italic">{slogan}</p>}
+              {vipService?.enabled && (
+                <button onClick={() => setShowVIP(true)}
+                        className="mt-4 flex items-center gap-1.5 text-xs font-bold transition-all hover:scale-105"
+                        style={{ color: clr }}>
+                  <Crown size={11} /> Book VIP Table
+                </button>
+              )}
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30 mb-3">Contact</p>
+              {contact?.phone && (
+                <a href={`tel:${contact.phone}`} className="block text-sm text-white/50 hover:text-white/70 mb-1 transition-colors">{contact.phone}</a>
+              )}
+              {address?.city && <p className="text-sm text-white/50">{address.street && `${address.street}, `}{address.city}</p>}
+              {googleMapsLink && (
+                <a href={googleMapsLink} target="_blank" rel="noopener noreferrer"
+                   className="inline-flex items-center gap-1 text-xs mt-2 font-semibold transition-colors" style={{ color: clr }}>
+                  Directions <ExternalLink size={10} />
+                </a>
+              )}
+            </div>
+            {sortedHours.length > 0 && (
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30 mb-3 flex items-center gap-1.5">
+                  <Clock size={10} style={{ color: clr }} /> Hours
+                </p>
+                <div className="space-y-1.5">
+                  {sortedHours.map((h, i) => (
+                    <div key={i} className="flex justify-between text-xs">
+                      <span className="capitalize text-white/40">{h.day.slice(0,3)}</span>
+                      <span className={h.isClosed ? 'text-red-400/60' : 'text-white/55'}>
+                        {h.isClosed ? 'Closed' : `${h.open}–${h.close}`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30 mb-3">Social</p>
+              <div className="flex gap-2">
+                {socialMedia?.facebook && (
+                  <a href={socialMedia.facebook} target="_blank" rel="noopener noreferrer"
+                     className="w-9 h-9 rounded-full border border-white/15 flex items-center justify-center text-white/40 hover:text-white hover:border-white/40 transition-all text-xs font-black">f</a>
+                )}
+                {socialMedia?.instagram && (
+                  <a href={socialMedia.instagram} target="_blank" rel="noopener noreferrer"
+                     className="w-9 h-9 rounded-full border border-white/15 flex items-center justify-center text-white/40 hover:text-white hover:border-white/40 transition-all text-xs font-black">in</a>
+                )}
+                {socialMedia?.tiktok && (
+                  <a href={socialMedia.tiktok} target="_blank" rel="noopener noreferrer"
+                     className="w-9 h-9 rounded-full border border-white/15 flex items-center justify-center text-white/40 hover:text-white hover:border-white/40 transition-all text-xs font-black">tk</a>
+                )}
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-4">
-            {socialMedia?.facebook && (
-              <a href={socialMedia.facebook} target="_blank" rel="noopener noreferrer"
-                 className="w-9 h-9 rounded-full border border-white/15 flex items-center justify-center text-white/40 hover:text-white hover:border-white/40 transition-all text-xs font-black">f</a>
-            )}
-            {socialMedia?.instagram && (
-              <a href={socialMedia.instagram} target="_blank" rel="noopener noreferrer"
-                 className="w-9 h-9 rounded-full border border-white/15 flex items-center justify-center text-white/40 hover:text-white hover:border-white/40 transition-all text-xs font-black">in</a>
-            )}
-            {socialMedia?.tiktok && (
-              <a href={socialMedia.tiktok} target="_blank" rel="noopener noreferrer"
-                 className="w-9 h-9 rounded-full border border-white/15 flex items-center justify-center text-white/40 hover:text-white hover:border-white/40 transition-all text-xs font-black">tk</a>
-            )}
+          <div className="border-t border-white/8 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-white/20">
+            <span>{footerText || `© ${new Date().getFullYear()} ${name}`}</span>
+            <a href="/" className="hover:text-white/40 transition-colors">Restora</a>
           </div>
-          <p className="text-xs text-white/20">
-            {footerText || `© ${new Date().getFullYear()} ${name}`} · <a href="/" className="hover:text-white/40 transition-colors">Restora</a>
-          </p>
         </div>
       </footer>
+
+      {showVIP && (
+        <VIPBookingModal slug={slug} restaurantName={name} primaryColor={clr} onClose={() => setShowVIP(false)} />
+      )}
     </div>
   );
 }

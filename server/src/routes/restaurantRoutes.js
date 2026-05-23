@@ -7,12 +7,17 @@ import {
   getPublicRestaurants,
   getPublicRestaurantBySlug,
 } from '../controllers/restaurantController.js';
+import { getPublicTables, getTableAvailability } from '../controllers/tableController.js';
+import { createPublicReservation } from '../controllers/reservationController.js';
 import { protect, authorize } from '../middleware/auth.js';
 
 const router = Router();
 
 // Public
 router.get('/', getPublicRestaurants);
+router.get('/:slug/tables/availability', getTableAvailability);
+router.get('/:slug/tables', getPublicTables);
+router.post('/:slug/reservations', createPublicReservation);
 router.get('/:slug', getPublicRestaurantBySlug);
 
 // Protected
