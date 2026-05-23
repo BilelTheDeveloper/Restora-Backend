@@ -451,7 +451,7 @@ export default function VIPSetup() {
 
   // ── Seed from server ─────────────────────────────────────────
   useEffect(() => {
-    if (tablesData) setTables(tablesData.map(t => ({ ...t, _localId: t._id })));
+    if (tablesData) setTables(tablesData.map(t => ({ ...t, _localId: String(t._id) })));
   }, [tablesData]);
 
   useEffect(() => {
@@ -708,9 +708,11 @@ export default function VIPSetup() {
       qc.invalidateQueries({ queryKey: ['my-restaurant'] });
       setDeletedIds([]);
       setDirty(false);
+      setSelected(null);
+      historyRef.current = { past: [], future: [] };
       toast.success('VIP setup saved!');
     },
-    onError: () => toast.error('Save failed — please try again'),
+    onError: (err) => toast.error(err?.response?.data?.message ?? 'Save failed — please try again'),
   });
 
   // ── Keyboard shortcuts ────────────────────────────────────────
