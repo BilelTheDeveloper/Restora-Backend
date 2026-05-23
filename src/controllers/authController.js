@@ -1,4 +1,6 @@
+import crypto from 'crypto';
 import User from '../models/User.js';
+import OTP, { generateOTPCode } from '../models/OTP.js';
 import SecurityLog from '../models/SecurityLog.js';
 import generateToken from '../utils/generateToken.js';
 import { validateBase64Size } from '../middleware/security.js';
@@ -232,6 +234,139 @@ export const getVerificationStatus = async (req, res, next) => {
   try {
     const user = await User.findById(req.user._id).select('verificationStatus rejectionReason');
     success(res, { verificationStatus: user.verificationStatus, rejectionReason: user.rejectionReason });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ── OTP ────────────────────────────────────────────────────────
+
+export const requestOTP = async (req, res, next) => {
+  try {
+    const { type, newValue } = req.body;
+
+    const VALID_TYPES = ['email_change', 'phone_change', 'password_reset'];
+    if (!VALID_TYPES.includes(type)) {
+      res.status(400);
+      return next(new Error('Invalid OTP type'));
+    }
+
+    if (['email_change', 'phone_change'].includes(type) && !newValue?.trim()) {
+      res.status(400);
+      return next(new Error('New value is required'));
+    }
+
+    if (type === 'email_change' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newValue.trim())) {
+      res.status(400);
+      return next(new Error('Invalid email format'));
+    }
+
+    if (type === 'email_change') {
+      const taken = await User.findOne({ email: newValue.toLowerCase().trim() });
+      if (taken && taken._id.toString() !== req.user._id.toString()) {
+        res.status(400);
+        return next(new Error('Email already in use'));
+      }
+    }
+
+    // Max 3 OTPs per hour per user per type
+    const recentCount = await OTP.countDocuments({
+      userId:    req.user._id,
+      type,
+      createdAt: { $gt: new Date(Date.now() - 60 * 60 * 1000) },
+    });
+    if (recentCount >= 3) {
+      res.status(429);
+      return next(new Error('Too many OTP requests. Please try again in an hour.'));
+    }
+
+    // Delete existing unused OTPs of same type
+    await OTP.deleteMany({ userId: req.user._id, type, used: false });
+
+    const code      = generateOTPCode();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+
+    await OTP.create({ userId: req.user._id, code, type, newValue: newValue?.trim(), expiresAt });
+
+    // TODO production: send email/SMS via transactional provider
+    const isDev = process.env.NODE_ENV !== 'production';
+    success(res, isDev ? { code, expiresIn: '10 minutes' } : {}, 'Verification code sent');
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const verifyOTP = async (req, res, next) => {
+  try {
+    const { type, code, newPassword } = req.body;
+
+    if (!type || !code) {
+      res.status(400);
+      return next(new Error('Type and code are required'));
+    }
+
+    if (type === 'password_reset' && (!newPassword || newPassword.length < 8)) {
+      res.status(400);
+      return next(new Error('New password must be at least 8 characters'));
+    }
+
+    const otp = await OTP.findOne({
+      userId:    req.user._id,
+      type,
+      used:      false,
+      expiresAt: { $gt: new Date() },
+    }).sort({ createdAt: -1 });
+
+    if (!otp || otp.code !== String(code)) {
+      res.status(400);
+      return next(new Error('Invalid or expired verification code'));
+    }
+
+    otp.used = true;
+    await otp.save();
+
+    const user = await User.findById(req.user._id);
+
+    if (type === 'email_change') {
+      user.email = otp.newValue.toLowerCase().trim();
+      await user.save({ validateBeforeSave: false });
+      return success(res, { email: user.email }, 'Email updated successfully');
+    }
+
+    if (type === 'phone_change') {
+      user.phone = otp.newValue.trim();
+      await user.save({ validateBeforeSave: false });
+      return success(res, { phone: user.phone }, 'Phone number updated successfully');
+    }
+
+    if (type === 'password_reset') {
+      user.password = newPassword;
+      await user.save();
+      logEvent('password_change', 'info', {
+        userId:  user._id,
+        email:   user.email,
+        ...getClientInfo(req),
+        message: 'Password reset via OTP',
+      });
+      return success(res, null, 'Password reset successfully');
+    }
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const updateNotifications = async (req, res, next) => {
+  try {
+    const allowed = ['email', 'orders', 'marketing', 'lowStock', 'dailyReport', 'sms'];
+    const update  = {};
+    for (const key of allowed) {
+      if (req.body[key] !== undefined) {
+        update[`notifications.${key}`] = Boolean(req.body[key]);
+      }
+    }
+
+    const user = await User.findByIdAndUpdate(req.user._id, update, { new: true }).select('notifications');
+    success(res, { notifications: user.notifications });
   } catch (err) {
     next(err);
   }
