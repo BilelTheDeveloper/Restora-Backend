@@ -35,14 +35,27 @@ export const createTable = async (req, res, next) => {
       number = String(n);
     }
 
-    const table = await Table.create({
-      restaurant: restaurant._id,
-      number,
-      capacity: capacity ?? 4,
-      shape:    shape    ?? 'round',
-      position: position ?? { x: 200, y: 200 },
-      floor:    floor    ?? 'main',
-    });
+    // Retry loop in case of a concurrent-insert race condition
+    let table;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        table = await Table.create({
+          restaurant: restaurant._id,
+          number,
+          capacity: capacity ?? 4,
+          shape:    shape    ?? 'round',
+          position: position ?? { x: 200, y: 200 },
+          floor:    floor    ?? 'main',
+        });
+        break;
+      } catch (e) {
+        if (e.code === 11000 && attempt < 4) {
+          let n = (await Table.countDocuments({ restaurant: restaurant._id })) + 1;
+          while (await Table.findOne({ restaurant: restaurant._id, number: String(n) })) n++;
+          number = String(n);
+        } else { throw e; }
+      }
+    }
     created(res, table);
   } catch (err) { next(err); }
 };
