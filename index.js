@@ -11,6 +11,7 @@ import connectDB from './src/config/db.js';
 import routes from './src/routes/index.js';
 import { errorHandler, notFound } from './src/middleware/errorHandler.js';
 import { apiLimiter, sanitize } from './src/middleware/security.js';
+import { maintenanceGuard } from './src/middleware/maintenance.js';
 import User from './src/models/User.js';
 
 dotenv.config();
@@ -98,6 +99,9 @@ else         app.use(morgan('combined'));
 app.get('/health', (_req, res) =>
   res.json({ status: 'ok', app: 'Restora API', env: process.env.NODE_ENV, ts: new Date().toISOString() })
 );
+
+// ─── Maintenance guard (before routes) ─────────────────────
+app.use(maintenanceGuard);
 
 // ─── Routes ────────────────────────────────────────────────
 app.use('/api', routes);

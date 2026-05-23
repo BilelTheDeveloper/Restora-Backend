@@ -10,6 +10,7 @@ const securityLogSchema = new mongoose.Schema(
         'kyc_submit', 'kyc_approved', 'kyc_rejected',
         'rate_limit_hit', 'unauthorized_access', 'suspicious_request',
         'token_invalid', 'account_deactivated',
+        'maintenance_on', 'maintenance_off',
       ],
       required: true,
     },
