@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import cookieParser from 'cookie-parser';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { randomUUID } from 'crypto';
@@ -43,15 +44,17 @@ app.use(helmet({
   contentSecurityPolicy: isProd
     ? {
         directives: {
-          defaultSrc:  ["'self'"],
-          scriptSrc:   ["'self'", "'unsafe-inline'"],
-          styleSrc:    ["'self'", "'unsafe-inline'"],
-          imgSrc:      ["'self'", 'data:', 'blob:'],
-          mediaSrc:    ["'self'", 'blob:'],
-          connectSrc:  ["'self'", ...allowedOrigins],
-          fontSrc:     ["'self'"],
-          objectSrc:   ["'none'"],
-          frameSrc:    ["'none'"],
+          defaultSrc:     ["'self'"],
+          scriptSrc:      ["'self'", "'unsafe-inline'"],
+          styleSrc:       ["'self'", "'unsafe-inline'"],
+          imgSrc:         ["'self'", 'data:', 'blob:', 'https:'],
+          mediaSrc:       ["'self'", 'blob:'],
+          connectSrc:     ["'self'", ...allowedOrigins, 'https://restora-backend-uxh8.onrender.com'],
+          fontSrc:        ["'self'", 'data:'],
+          objectSrc:      ["'none'"],
+          frameSrc:       ["'none'"],
+          baseUri:        ["'none'"],
+          formAction:     ["'self'"],
           upgradeInsecureRequests: [],
         },
       }
@@ -78,6 +81,9 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID'],
 }));
+
+// ─── Cookie parsing ────────────────────────────────────────
+app.use(cookieParser());
 
 // ─── Rate limiting ─────────────────────────────────────────
 app.use('/api', apiLimiter);
