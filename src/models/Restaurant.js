@@ -92,7 +92,17 @@ const restaurantSchema = new mongoose.Schema(
       showAbout:      { type: Boolean, default: true },
       showHours:      { type: Boolean, default: false },
       ctaText:        { type: String, default: 'Reserve a Table' },
+      discoverText:   { type: String, default: 'Discover More' },
+      vipCtaText:     { type: String, default: 'Book VIP Table' },
     },
+
+    vipService: {
+      enabled:     { type: Boolean, default: false },
+      description: { type: String, default: '' },
+      minSpend:    { type: Number, default: 0 },
+    },
+
+    isPublished: { type: Boolean, default: false },
 
     rating:      { type: Number, default: 0, min: 0, max: 5 },
     reviewCount: { type: Number, default: 0 },

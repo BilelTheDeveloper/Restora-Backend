@@ -7,6 +7,8 @@ const ALLOWED_FIELDS = [
   'name', 'description', 'cuisine', 'address', 'contact',
   'settings', 'logo', 'coverImage', 'socialMedia', 'isHalal',
   'tags', 'priceRange', 'openingHours',
+  'template', 'menu', 'about', 'images', 'googleMapsLink',
+  'vipService', 'isPublished',
 ];
 
 const pickAllowed = (body) =>
@@ -141,6 +143,9 @@ export const getPublicRestaurantBySlug = async (req, res, next) => {
     if (!restaurant) {
       res.status(404);
       return next(new Error('Restaurant not found'));
+    }
+    if (!restaurant.isPublished) {
+      return res.status(200).json({ success: true, data: null, unpublished: true });
     }
     success(res, restaurant);
   } catch (err) {
