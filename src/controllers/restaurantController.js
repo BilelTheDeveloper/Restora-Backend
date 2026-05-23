@@ -62,7 +62,7 @@ export const updateRestaurant = async (req, res, next) => {
     const update = pickAllowed(req.body);
     const restaurant = await Restaurant.findOneAndUpdate(
       { owner: req.user._id },
-      update,
+      { $set: update },
       { new: true, runValidators: true }
     );
     if (!restaurant) {
