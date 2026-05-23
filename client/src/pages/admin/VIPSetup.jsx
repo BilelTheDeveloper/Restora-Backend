@@ -694,12 +694,14 @@ export default function VIPSetup() {
     mutationFn: async () => {
       await api.put('/restaurants/admin/mine', { vipService: vip });
       await Promise.all(deletedIds.map(id => api.delete(`/owner/tables/${id}`)));
-      await Promise.all(tables.map(t => {
+      // Sequential to prevent race conditions on auto-number assignment
+      for (const t of tables) {
         const payload = { number: t.number, capacity: t.capacity, shape: t.shape, position: t.position };
         if (t._id && !String(t._id).startsWith('new-'))
-          return api.patch(`/owner/tables/${t._id}`, payload);
-        return api.post('/owner/tables', payload);
-      }));
+          await api.patch(`/owner/tables/${t._id}`, payload);
+        else
+          await api.post('/owner/tables', payload);
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['my-tables'] });
