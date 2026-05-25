@@ -13,6 +13,16 @@ function dayRange(dateStr) {
   return { start, end };
 }
 
+// Minimum party size for a given table capacity:
+// - 2-seat  → min 2 (exact)
+// - 4-seat  → min 4 (exact)
+// - 6-seat  → min 4 (capacity - 2)
+// - 8-seat  → min 6 (capacity - 2)
+// - 10-seat → min 8 (capacity - 2)
+function minPartyForCapacity(capacity) {
+  return capacity <= 4 ? capacity : capacity - 2;
+}
+
 // ── Public: create a VIP reservation ────────────────────────────
 export const createPublicReservation = async (req, res, next) => {
   try {
@@ -38,6 +48,15 @@ export const createPublicReservation = async (req, res, next) => {
         res.status(400);
         return next(new Error(
           `Table ${table.number} seats ${table.capacity} — your party of ${party} is too large. Please select a bigger table.`
+        ));
+      }
+
+      // Party size must meet the minimum for this table
+      const minParty = minPartyForCapacity(table.capacity);
+      if (party < minParty) {
+        res.status(400);
+        return next(new Error(
+          `Table ${table.number} (${table.capacity} seats) requires a minimum of ${minParty} guests. Please select a smaller table or add more guests.`
         ));
       }
 
