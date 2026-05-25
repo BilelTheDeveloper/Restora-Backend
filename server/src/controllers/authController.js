@@ -286,7 +286,7 @@ export const changePassword = async (req, res, next) => {
 
     // Password change invalidates ALL sessions (force re-login everywhere)
     user.password = newPassword;
-    await user.updateOne({ $set: { password: user.password, refreshTokens: [] } });
+    user.refreshTokens = [];
     await user.save();
     clearRefreshCookie(res);
 

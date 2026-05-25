@@ -10,6 +10,8 @@ import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import connectDB from './src/config/db.js';
 import routes from './src/routes/index.js';
+import { setIO } from './src/socket.js';
+import { startAlertEngine } from './src/services/alertEngine.js';
 import { errorHandler, notFound } from './src/middleware/errorHandler.js';
 import { apiLimiter, sanitize } from './src/middleware/security.js';
 import { maintenanceGuard } from './src/middleware/maintenance.js';
@@ -33,6 +35,7 @@ const httpServer = createServer(app);
 export const io = new Server(httpServer, {
   cors: { origin: allowedOrigins, methods: ['GET', 'POST'], credentials: true },
 });
+setIO(io);
 
 app.set('trust proxy', 1);
 
@@ -143,4 +146,5 @@ io.on('connection', (socket) => {
 const PORT = process.env.PORT || 5000;
 httpServer.listen(PORT, () => {
   console.log(`Restora API on port ${PORT} [${process.env.NODE_ENV || 'development'}]`);
+  startAlertEngine();
 });

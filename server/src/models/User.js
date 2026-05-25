@@ -97,11 +97,11 @@ userSchema.methods.resetLoginAttempts = async function () {
 
 // ── Refresh token helpers ──────────────────────────────────
 userSchema.methods.addRefreshToken = async function (token) {
-  // Prune tokens older than 8 days and cap at 10 active sessions
   const cutoff = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000);
+  // MongoDB forbids $push and $pull on the same path in one operation — two steps
+  await this.updateOne({ $pull: { refreshTokens: { createdAt: { $lt: cutoff } } } });
   await this.updateOne({
     $push: { refreshTokens: { $each: [{ token, createdAt: new Date() }], $slice: -10 } },
-    $pull: { refreshTokens: { createdAt: { $lt: cutoff } } },
   });
 };
 

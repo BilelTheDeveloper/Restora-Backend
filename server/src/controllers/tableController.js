@@ -18,7 +18,7 @@ export const createTable = async (req, res, next) => {
   try {
     const restaurant = await Restaurant.findOne({ owner: req.user._id }).select('_id');
     if (!restaurant) { res.status(404); return next(new Error('Restaurant not found')); }
-    const { capacity, shape, position, floor } = req.body;
+    const { capacity, shape, position, floor, rotation, floorId } = req.body;
     let { number } = req.body;
 
     // Resolve duplicate table numbers gracefully
@@ -45,7 +45,9 @@ export const createTable = async (req, res, next) => {
           capacity: capacity ?? 4,
           shape:    shape    ?? 'round',
           position: position ?? { x: 200, y: 200 },
+          rotation: rotation ?? 0,
           floor:    floor    ?? 'main',
+          floorId:  floorId  ?? 'floor-main',
         });
         break;
       } catch (e) {
@@ -65,10 +67,18 @@ export const updateTable = async (req, res, next) => {
   try {
     const restaurant = await Restaurant.findOne({ owner: req.user._id }).select('_id');
     if (!restaurant) { res.status(404); return next(new Error('Restaurant not found')); }
-    const { number, capacity, shape, position, floor } = req.body;
+    const { number, capacity, shape, position, floor, rotation, floorId } = req.body;
     const table = await Table.findOneAndUpdate(
       { _id: req.params.id, restaurant: restaurant._id },
-      { ...(number !== undefined && { number }), ...(capacity !== undefined && { capacity }), ...(shape !== undefined && { shape }), ...(position !== undefined && { position }), ...(floor !== undefined && { floor }) },
+      {
+        ...(number    !== undefined && { number }),
+        ...(capacity  !== undefined && { capacity }),
+        ...(shape     !== undefined && { shape }),
+        ...(position  !== undefined && { position }),
+        ...(floor     !== undefined && { floor }),
+        ...(rotation  !== undefined && { rotation }),
+        ...(floorId   !== undefined && { floorId }),
+      },
       { new: true, runValidators: true }
     );
     if (!table) { res.status(404); return next(new Error('Table not found')); }
@@ -93,14 +103,17 @@ export const getPublicTables = async (req, res, next) => {
   try {
     const restaurant = await Restaurant.findOne({ slug: req.params.slug, isActive: true })
       .select('_id vipService');
-    if (!restaurant?.vipService?.enabled) return success(res, { tables: [], zones: [], room: null });
+    if (!restaurant?.vipService?.enabled) return success(res, { tables: [], floors: [], zones: [], room: null });
     const tables = await Table.find({ restaurant: restaurant._id, isActive: true })
-      .select('number capacity shape position floor')
+      .select('number capacity shape position rotation floorId floor')
       .sort('number');
+    const vs = restaurant.vipService;
+    // Return both new floors format and legacy room/zones for backwards compat
     success(res, {
       tables,
-      zones: restaurant.vipService.zones ?? [],
-      room:  restaurant.vipService.room  ?? null,
+      floors: vs.floors?.length ? vs.floors : [],
+      zones:  vs.zones ?? [],
+      room:   vs.room  ?? null,
     });
   } catch (err) { next(err); }
 };

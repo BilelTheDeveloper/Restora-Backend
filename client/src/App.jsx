@@ -9,6 +9,7 @@ import { adminService } from './services/adminService';
 import PublicLayout from './components/layout/PublicLayout';
 import Home from './pages/public/Home';
 import RestaurantPage from './pages/public/RestaurantPage';
+import VIPBookingPage from './pages/public/VIPBookingPage';
 import Maintenance from './pages/public/Maintenance';
 
 // Auth pages
@@ -28,8 +29,17 @@ import Staff from './pages/admin/Staff';
 import Settings from './pages/admin/Settings';
 import KYC from './pages/admin/KYC';
 import RestaurantSetup from './pages/admin/RestaurantSetup';
-import Themes    from './pages/admin/Themes';
-import VIPSetup  from './pages/admin/VIPSetup';
+import Themes         from './pages/admin/Themes';
+import ThemeCustomize from './pages/admin/ThemeCustomize';
+import VIPSetup       from './pages/admin/VIPSetup';
+import Analytics      from './pages/admin/Analytics';
+import Revenue        from './pages/admin/Revenue';
+import Copilot        from './pages/admin/Copilot';
+import CRM            from './pages/admin/CRM';
+import Inventory      from './pages/admin/Inventory';
+import QRManager      from './pages/admin/QRManager';
+import Alerts         from './pages/admin/Alerts';
+import QRMenu         from './pages/public/QRMenu';
 
 // Super-admin (platform) layout & pages
 import SuperAdminLayout from './components/layout/SuperAdminLayout';
@@ -120,8 +130,12 @@ export default function App() {
             <Route path="/" element={<Home />} />
           </Route>
 
-          {/* Restaurant public page — standalone */}
-          <Route path="/r/:slug" element={<RestaurantPage />} />
+          {/* Restaurant public pages — standalone */}
+          <Route path="/r/:slug"     element={<RestaurantPage />} />
+          <Route path="/r/:slug/vip" element={<VIPBookingPage />} />
+
+          {/* QR ordering — public, mobile-first */}
+          <Route path="/qr/:slug/:tableId" element={<QRMenu />} />
 
           {/* Auth */}
           <Route path="/login"    element={<Login />} />
@@ -165,8 +179,16 @@ export default function App() {
             <Route path="settings"     element={<Settings />} />
             <Route path="kyc"          element={<KYC />} />
             <Route path="setup"        element={<RestaurantSetup />} />
-            <Route path="themes"       element={<Themes />} />
-            <Route path="vip-setup"    element={<VIPSetup />} />
+            <Route path="themes"              element={<Themes />} />
+            <Route path="themes/customize"   element={<ThemeCustomize />} />
+            <Route path="vip-setup"          element={<VIPSetup />} />
+            <Route path="analytics"          element={<Analytics />} />
+            <Route path="revenue"            element={<Revenue />} />
+            <Route path="copilot"            element={<Copilot />} />
+            <Route path="crm"               element={<CRM />} />
+            <Route path="inventory"          element={<Inventory />} />
+            <Route path="qr-manager"         element={<QRManager />} />
+            <Route path="alerts"             element={<Alerts />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

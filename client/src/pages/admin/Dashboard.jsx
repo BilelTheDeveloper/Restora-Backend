@@ -1,461 +1,291 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { motion } from 'framer-motion';
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, PieChart, Pie, Cell,
+  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell,
 } from 'recharts';
 import {
-  TrendingUp, TrendingDown, ShoppingCart, Grid3X3,
-  CalendarDays, ArrowRight, ChefHat, Monitor,
-  ArrowUpRight, Flame, Users,
+  TrendingUp, ShoppingCart, Grid3X3, CalendarDays, ArrowRight,
+  ChefHat, Zap, Bell, Brain, AlertTriangle, CheckCircle2,
+  TrendingDown, Activity,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
-import { Card } from '../../components/ui';
+import { analyticsService } from '../../services/analyticsService';
+import { orderService } from '../../services/orderService';
+import { alertService } from '../../services/alertService';
+import { useSocket } from '../../hooks/useSocket';
+import { useChartColors } from '../../hooks/useChartColors';
 
-// ─── Static mock data (replace with API calls when backend ready) ──────────
-const REVENUE_TREND = [
-  { day: 'Mon', v: 8200 },
-  { day: 'Tue', v: 9100 },
-  { day: 'Wed', v: 7400 },
-  { day: 'Thu', v: 11200 },
-  { day: 'Fri', v: 13800 },
-  { day: 'Sat', v: 15600 },
-  { day: 'Sun', v: 12840 },
-];
-
-const ORDER_TYPES = [
-  { name: 'Dine-in',  value: 52, color: '#f97316' },
-  { name: 'Takeaway', value: 31, color: '#3b82f6' },
-  { name: 'Delivery', value: 17, color: '#8b5cf6' },
-];
-
-const RECENT_ORDERS = [
-  { id: '#0042', items: 4, type: 'Dine-in',  table: 'T-5', status: 'serving',   total: 87.5,  ago: '2 min' },
-  { id: '#0041', items: 2, type: 'Takeaway', table: null,  status: 'ready',     total: 34.0,  ago: '8 min' },
-  { id: '#0040', items: 6, type: 'Delivery', table: null,  status: 'preparing', total: 112.0, ago: '15 min' },
-  { id: '#0039', items: 3, type: 'Dine-in',  table: 'T-3', status: 'paid',      total: 65.5,  ago: '22 min' },
-  { id: '#0038', items: 1, type: 'Takeaway', table: null,  status: 'paid',      total: 18.0,  ago: '31 min' },
-];
-
-const SPARKS = {
-  revenue:      [8200, 9100, 7400, 11200, 13800, 15600, 12840].map(v => ({ v })),
-  orders:       [31, 38, 29, 42, 51, 58, 47].map(v => ({ v })),
-  tables:       [8, 10, 9, 12, 14, 15, 12].map(v => ({ v })),
-  reservations: [5, 7, 4, 8, 9, 10, 8].map(v => ({ v })),
+const ORDER_TYPE_COLORS = { 'dine-in': '#f97316', takeaway: '#3b82f6', delivery: '#8b5cf6', qr: '#14b8a6' };
+const ALERT_COLORS = {
+  info:     'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20',
+  warning:  'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20',
+  critical: 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/20',
 };
+const ALERT_ICONS = { info: CheckCircle2, warning: AlertTriangle, critical: Zap };
 
-// ─── Helpers ───────────────────────────────────────────────────────────────
-function getGreeting() {
-  const h = new Date().getHours();
-  if (h < 12) return 'Good morning';
-  if (h < 17) return 'Good afternoon';
-  return 'Good evening';
-}
-
-const STATUS_MAP = {
-  serving:   { label: 'Serving',   dot: 'bg-blue-500',   pill: 'bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400' },
-  ready:     { label: 'Ready',     dot: 'bg-emerald-500', pill: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400' },
-  preparing: { label: 'Preparing', dot: 'bg-orange-500',  pill: 'bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400' },
-  paid:      { label: 'Paid',      dot: 'bg-gray-300',    pill: 'bg-gray-100 text-gray-400 dark:bg-white/5 dark:text-gray-500' },
-};
-
-const TYPE_MAP = {
-  'Dine-in':  'text-orange-500',
-  'Takeaway': 'text-blue-500',
-  'Delivery': 'text-purple-500',
-};
-
-// ─── Sparkline ─────────────────────────────────────────────────────────────
-function Sparkline({ data, color, uid }) {
+function StatCard({ label, value, unit, trend, sub, icon: Icon, color = 'orange', live = false }) {
+  const COLORS = {
+    orange:  'text-orange-500 dark:text-orange-400  bg-orange-50  dark:bg-orange-500/10',
+    blue:    'text-blue-500   dark:text-blue-400    bg-blue-50    dark:bg-blue-500/10',
+    emerald: 'text-emerald-500 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10',
+    amber:   'text-amber-500  dark:text-amber-400   bg-amber-50   dark:bg-amber-500/10',
+  };
   return (
-    <ResponsiveContainer width="100%" height={44}>
-      <AreaChart data={data} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
-        <defs>
-          <linearGradient id={`sg-${uid}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%"   stopColor={color} stopOpacity={0.28} />
-            <stop offset="100%" stopColor={color} stopOpacity={0} />
-          </linearGradient>
-        </defs>
-        <Area
-          type="monotone"
-          dataKey="v"
-          stroke={color}
-          strokeWidth={2}
-          fill={`url(#sg-${uid})`}
-          dot={false}
-          isAnimationActive={false}
-        />
-      </AreaChart>
-    </ResponsiveContainer>
-  );
-}
-
-// ─── KPI Card ──────────────────────────────────────────────────────────────
-function KpiCard({ label, value, suffix, trend, sub, icon: Icon, iconBg, iconColor, sparkData, sparkColor, sparkUid }) {
-  const up = trend >= 0;
-  return (
-    <div className="bg-white dark:bg-[#141414] border border-gray-100 dark:border-white/6 rounded-2xl overflow-hidden shadow-sm">
-      <div className="px-5 pt-5">
-        <div className="flex items-start justify-between mb-3">
-          <div className={`w-9 h-9 rounded-xl ${iconBg} flex items-center justify-center shrink-0`}>
-            <Icon size={17} className={iconColor} />
-          </div>
-          <div className={[
-            'flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full',
-            up
-              ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400'
-              : 'bg-red-50 text-red-500 dark:bg-red-500/10 dark:text-red-400',
-          ].join(' ')}>
-            {up ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
-            {up ? '+' : ''}{trend}%
-          </div>
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+      className="bg-white dark:bg-[#111111] border border-gray-100 dark:border-white/6 rounded-2xl p-4 relative overflow-hidden ui-shadow-sm transition-theme"
+    >
+      {live && (
+        <span className="absolute top-3 right-3 flex h-2 w-2">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+        </span>
+      )}
+      <div className="flex items-center gap-2 mb-3">
+        <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${COLORS[color]}`}>
+          <Icon size={14} />
         </div>
-        <p className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
-          {value}
-          {suffix && <span className="text-sm font-medium text-gray-400 ml-1">{suffix}</span>}
-        </p>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{label}</p>
-        <p className="text-[10px] text-gray-400 mt-0.5">{sub}</p>
+        <p className="text-[10px] font-bold text-gray-400 dark:text-white/40 uppercase tracking-wider">{label}</p>
       </div>
-      <div className="px-2 pb-1 mt-1">
-        <Sparkline data={sparkData} color={sparkColor} uid={sparkUid} />
-      </div>
-    </div>
-  );
-}
-
-// ─── Revenue chart tooltip ─────────────────────────────────────────────────
-function RevenueTooltip({ active, payload, label }) {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/10 rounded-xl px-3 py-2 shadow-xl text-xs">
-      <p className="text-gray-400 mb-0.5">{label}</p>
-      <p className="font-bold text-gray-900 dark:text-white">
-        {payload[0].value.toLocaleString()}
-        <span className="font-normal text-gray-400 ml-1">TND</span>
+      <p className="text-3xl font-black text-gray-900 dark:text-white tabular-nums leading-none">
+        {value}<span className="text-base font-semibold text-gray-300 dark:text-white/30 ml-1">{unit}</span>
       </p>
-    </div>
+      {(trend !== undefined || sub) && (
+        <div className="flex items-center gap-1.5 mt-2">
+          {trend !== undefined && (
+            <span className={`text-xs font-bold flex items-center gap-0.5 ${trend >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+              {trend >= 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
+              {trend >= 0 ? '+' : ''}{trend}%
+            </span>
+          )}
+          {sub && <span className="text-[10px] text-gray-400 dark:text-white/30">{sub}</span>}
+        </div>
+      )}
+    </motion.div>
   );
 }
 
-// ─── Dashboard ─────────────────────────────────────────────────────────────
 export default function Dashboard() {
-  const user = useAuthStore((s) => s.user);
-  const [open, setOpen] = useState(true);
+  const { user } = useAuthStore();
+  const qc = useQueryClient();
+  const chart = useChartColors();
 
-  const dateStr = new Date().toLocaleDateString('en-US', {
-    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+  const getGreeting = () => {
+    const h = new Date().getHours();
+    if (h < 12) return 'Good morning';
+    if (h < 17) return 'Good afternoon';
+    return 'Good evening';
+  };
+
+  const { data: stats, isLoading: loadingStats } = useQuery({
+    queryKey: ['dashboard-stats'],
+    queryFn: () => analyticsService.getDashboard().then(r => r.data),
+    refetchInterval: 30_000,
   });
 
+  const { data: revenueChart = [] } = useQuery({
+    queryKey: ['revenue-chart'],
+    queryFn: () => analyticsService.getRevenue(14).then(r => r.data),
+  });
+
+  const { data: orderTypes = [] } = useQuery({
+    queryKey: ['order-types'],
+    queryFn: () => analyticsService.getOrderTypes(7).then(r => r.data),
+  });
+
+  const { data: activeOrders = [] } = useQuery({
+    queryKey: ['active-orders'],
+    queryFn: () => orderService.list({ status: 'pending,confirmed,preparing,ready', limit: 6 }).then(r => r.data?.data || []),
+    refetchInterval: 20_000,
+  });
+
+  const { data: alertsData } = useQuery({
+    queryKey: ['alerts-preview'],
+    queryFn: () => alertService.list({ unread: 'true', limit: 4 }).then(r => r.data),
+  });
+  const alerts = alertsData?.alerts || [];
+
+  useSocket(user?.restaurant, {
+    'order:new':            () => { qc.invalidateQueries(['active-orders']); qc.invalidateQueries(['dashboard-stats']); },
+    'order:status_changed': () =>   qc.invalidateQueries(['active-orders']),
+    'alert:new':            () =>   qc.invalidateQueries(['alerts-preview']),
+  });
+
+  const today = stats?.today || {};
+  const week  = stats?.week  || {};
+  const chartData = revenueChart.map(d => ({ day: d.date.slice(5), revenue: d.revenue }));
+  const pieData = orderTypes.map(o => ({ name: o._id, value: o.count, color: ORDER_TYPE_COLORS[o._id] || '#6b7280' }));
+
+  const quickLinks = [
+    { to: '/admin/pos',          label: 'Open POS',    icon: ShoppingCart, color: 'text-orange-500 dark:text-orange-400', bg: 'bg-orange-50 dark:bg-orange-500/10 hover:bg-orange-100 dark:hover:bg-orange-500/20' },
+    { to: '/admin/kitchen',      label: 'Kitchen',     icon: ChefHat,      color: 'text-amber-500 dark:text-amber-400',  bg: 'bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20'   },
+    { to: '/admin/tables',       label: 'Floor',       icon: Grid3X3,      color: 'text-blue-500 dark:text-blue-400',    bg: 'bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20'       },
+    { to: '/admin/reservations', label: 'Reservations',icon: CalendarDays, color: 'text-purple-500 dark:text-purple-400',bg: 'bg-purple-50 dark:bg-purple-500/10 hover:bg-purple-100 dark:hover:bg-purple-500/20' },
+    { to: '/admin/analytics',    label: 'Analytics',   icon: TrendingUp,   color: 'text-emerald-500 dark:text-emerald-400',bg:'bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20' },
+    { to: '/admin/copilot',      label: 'Copilot',     icon: Brain,        color: 'text-violet-500 dark:text-violet-400',bg: 'bg-violet-50 dark:bg-violet-500/10 hover:bg-violet-100 dark:hover:bg-violet-500/20' },
+  ];
+
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (!active || !payload?.length) return null;
+    return (
+      <div className="bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-white/10 rounded-xl px-3 py-2 ui-shadow">
+        <p className="text-[10px] text-gray-400 dark:text-white/40 mb-1">{label}</p>
+        <p className="text-sm font-bold text-orange-500 dark:text-orange-400">{payload[0]?.value?.toFixed(1)} TND</p>
+      </div>
+    );
+  };
+
   return (
-    <div className="p-5 sm:p-6 space-y-6 max-w-[1440px]">
+    <div className="p-5 sm:p-6 space-y-5 max-w-[1440px] bg-gray-50 dark:bg-[#0a0a0a] min-h-full transition-theme">
 
-      {/* ── Welcome ─────────────────────────────────────────── */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+      {/* Greeting */}
+      <div className="flex items-center justify-between">
         <div>
-          <p className="text-xs font-medium text-gray-400">{getGreeting()}</p>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white mt-0.5">
-            {user?.name?.split(' ')[0] ?? 'Chef'} 👋
-          </h1>
-          <p className="text-xs text-gray-400 mt-0.5">{dateStr}</p>
+          <h1 className="text-2xl font-black text-gray-900 dark:text-white">{getGreeting()}, {user?.name?.split(' ')[0]} 👋</h1>
+          <p className="text-xs text-gray-400 dark:text-white/30 mt-1">{new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
         </div>
-
-        <button
-          onClick={() => setOpen(!open)}
-          className={[
-            'inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all',
-            open
-              ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20'
-              : 'bg-gray-100 dark:bg-white/5 text-gray-500 border-gray-200 dark:border-white/10',
-          ].join(' ')}
-        >
-          <span className={[
-            'w-1.5 h-1.5 rounded-full',
-            open ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400',
-          ].join(' ')} />
-          {open ? 'Restaurant Open' : 'Restaurant Closed'}
-        </button>
+        <Link to="/admin/alerts" className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-white/6 hover:bg-gray-100 dark:hover:bg-white/10 border border-gray-200 dark:border-white/8 rounded-xl transition-all text-gray-500 dark:text-white/50 hover:text-gray-900 dark:hover:text-white text-xs font-semibold">
+          <Bell size={12} /> {alertsData?.unreadCount || 0} Alerts
+        </Link>
       </div>
 
-      {/* ── KPI Grid ────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-        <KpiCard
-          label="Today's Revenue"
-          value="12,840"
-          suffix="TND"
-          trend={12.5}
-          sub="vs. yesterday"
-          icon={TrendingUp}
-          iconBg="bg-orange-50 dark:bg-orange-500/10"
-          iconColor="text-orange-500"
-          sparkData={SPARKS.revenue}
-          sparkColor="#f97316"
-          sparkUid="revenue"
-        />
-        <KpiCard
-          label="Orders Today"
-          value="47"
-          trend={8.2}
-          sub="vs. yesterday"
-          icon={ShoppingCart}
-          iconBg="bg-blue-50 dark:bg-blue-500/10"
-          iconColor="text-blue-500"
-          sparkData={SPARKS.orders}
-          sparkColor="#3b82f6"
-          sparkUid="orders"
-        />
-        <KpiCard
-          label="Tables Active"
-          value="12"
-          suffix="/ 18"
-          trend={5.0}
-          sub="67% occupancy rate"
-          icon={Grid3X3}
-          iconBg="bg-purple-50 dark:bg-purple-500/10"
-          iconColor="text-purple-500"
-          sparkData={SPARKS.tables}
-          sparkColor="#8b5cf6"
-          sparkUid="tables"
-        />
-        <KpiCard
-          label="Reservations"
-          value="8"
-          trend={-2.1}
-          sub="today's bookings"
-          icon={CalendarDays}
-          iconBg="bg-teal-50 dark:bg-teal-500/10"
-          iconColor="text-teal-500"
-          sparkData={SPARKS.reservations}
-          sparkColor="#14b8a6"
-          sparkUid="reservations"
-        />
-      </div>
+      {/* KPIs */}
+      {loadingStats ? (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {[1,2,3,4].map(i => <div key={i} className="h-28 bg-gray-100 dark:bg-white/4 rounded-2xl animate-pulse" />)}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <StatCard label="Revenue Today"   value={today.revenue?.toFixed(0) || '0'} unit="TND" icon={TrendingUp}  color="orange"  live />
+          <StatCard label="Orders Today"    value={today.orders || 0}                             icon={ShoppingCart} color="blue"    live />
+          <StatCard label="Active Now"      value={today.activeOrders || 0}                       icon={Activity}     color="amber"   live />
+          <StatCard label="Occupied Tables" value={today.activeTables || 0}                       icon={Grid3X3}      color="emerald" />
+        </div>
+      )}
 
-      {/* ── Charts row ──────────────────────────────────────── */}
+      {/* Revenue chart + Quick links */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-
-        {/* Revenue area chart */}
-        <div className="lg:col-span-2 bg-white dark:bg-[#141414] border border-gray-100 dark:border-white/6 rounded-2xl shadow-sm overflow-hidden">
-          <div className="px-5 pt-5 pb-4 flex items-center justify-between">
+        <div className="lg:col-span-2 bg-white dark:bg-[#111111] border border-gray-100 dark:border-white/6 rounded-2xl p-5 ui-shadow-sm transition-theme">
+          <div className="flex items-center justify-between mb-4">
             <div>
-              <p className="text-sm font-semibold text-gray-900 dark:text-white">Revenue Trend</p>
-              <p className="text-xs text-gray-400 mt-0.5">Last 7 days · in TND</p>
+              <h2 className="text-sm font-bold text-gray-900 dark:text-white">Revenue — Last 14 Days</h2>
+              <p className="text-xs text-gray-400 dark:text-white/30 mt-0.5">This week: {week.revenue?.toFixed(0) || 0} TND · {week.orders || 0} orders</p>
             </div>
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1 rounded-full">
-              <ArrowUpRight size={12} />
-              +12.5% this week
-            </div>
+            <Link to="/admin/analytics" className="text-[10px] text-orange-500 dark:text-orange-400 hover:text-orange-600 flex items-center gap-1">
+              Full analytics <ArrowRight size={10} />
+            </Link>
           </div>
-          <div className="px-2 pb-4">
-            <ResponsiveContainer width="100%" height={200}>
-              <AreaChart data={REVENUE_TREND} margin={{ top: 5, right: 12, left: 4, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%"   stopColor="#f97316" stopOpacity={0.18} />
-                    <stop offset="100%" stopColor="#f97316" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="currentColor" strokeOpacity={0.05} vertical={false} />
-                <XAxis
-                  dataKey="day"
-                  tick={{ fontSize: 11, fill: '#9ca3af' }}
-                  axisLine={false}
-                  tickLine={false}
-                  dy={4}
-                />
-                <YAxis
-                  tick={{ fontSize: 11, fill: '#9ca3af' }}
-                  axisLine={false}
-                  tickLine={false}
-                  tickFormatter={v => `${(v / 1000).toFixed(0)}k`}
-                  width={32}
-                />
-                <Tooltip content={<RevenueTooltip />} cursor={{ stroke: '#f97316', strokeWidth: 1, strokeDasharray: '4 4' }} />
-                <Area
-                  type="monotone"
-                  dataKey="v"
-                  stroke="#f97316"
-                  strokeWidth={2.5}
-                  fill="url(#revGrad)"
-                  dot={false}
-                  activeDot={{ r: 5, fill: '#f97316', stroke: '#fff', strokeWidth: 2 }}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
+          <ResponsiveContainer width="100%" height={160}>
+            <AreaChart data={chartData} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
+              <defs>
+                <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%"   stopColor="#f97316" stopOpacity={0.3} />
+                  <stop offset="100%" stopColor="#f97316" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <XAxis dataKey="day" tick={{ fill: chart.axis, fontSize: 9 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: chart.axis, fontSize: 9 }} axisLine={false} tickLine={false} />
+              <Tooltip content={<CustomTooltip />} />
+              <Area type="monotone" dataKey="revenue" stroke="#f97316" strokeWidth={2} fill="url(#revGrad)" dot={false} />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
 
-        {/* Orders by type */}
-        <div className="bg-white dark:bg-[#141414] border border-gray-100 dark:border-white/6 rounded-2xl shadow-sm overflow-hidden">
-          <div className="px-5 pt-5 pb-3">
-            <p className="text-sm font-semibold text-gray-900 dark:text-white">Orders by Type</p>
-            <p className="text-xs text-gray-400 mt-0.5">Today's breakdown</p>
-          </div>
-
-          <div className="flex justify-center">
-            <ResponsiveContainer width="100%" height={148}>
-              <PieChart>
-                <Pie
-                  data={ORDER_TYPES}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={44}
-                  outerRadius={62}
-                  paddingAngle={4}
-                  dataKey="value"
-                  startAngle={90}
-                  endAngle={-270}
-                  strokeWidth={0}
-                >
-                  {ORDER_TYPES.map((entry) => (
-                    <Cell key={entry.name} fill={entry.color} />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="px-5 pb-5 space-y-2.5 mt-1">
-            {ORDER_TYPES.map((t) => (
-              <div key={t.name} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full shrink-0" style={{ background: t.color }} />
-                  <span className="text-xs text-gray-500 dark:text-gray-400">{t.name}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-16 h-1 bg-gray-100 dark:bg-white/8 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full" style={{ width: `${t.value}%`, background: t.color }} />
-                  </div>
-                  <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 w-7 text-right">{t.value}%</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* ── Recent Orders ────────────────────────────────────── */}
-      <div className="bg-white dark:bg-[#141414] border border-gray-100 dark:border-white/6 rounded-2xl shadow-sm overflow-hidden">
-        <div className="px-5 py-4 flex items-center justify-between border-b border-gray-100 dark:border-white/6">
-          <div>
-            <p className="text-sm font-semibold text-gray-900 dark:text-white">Recent Orders</p>
-            <p className="text-xs text-gray-400 mt-0.5">Last 5 orders today</p>
-          </div>
-          <Link
-            to="/admin/orders"
-            className="inline-flex items-center gap-1 text-xs text-orange-500 hover:text-orange-600 font-medium transition-colors"
-          >
-            View all <ArrowRight size={12} />
-          </Link>
-        </div>
-
-        {/* Table header */}
-        <div className="hidden sm:grid grid-cols-[56px_1fr_100px_90px_96px_52px] gap-3 px-5 py-2 border-b border-gray-50 dark:border-white/4">
-          {['Order', 'Details', 'Type', 'Status', 'Total', 'Time'].map(h => (
-            <span key={h} className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{h}</span>
-          ))}
-        </div>
-
-        <div className="divide-y divide-gray-50 dark:divide-white/4">
-          {RECENT_ORDERS.map((order) => {
-            const s = STATUS_MAP[order.status];
-            return (
-              <div
-                key={order.id}
-                className="grid grid-cols-[56px_1fr_100px_90px_96px_52px] gap-3 items-center px-5 py-3 hover:bg-gray-50/60 dark:hover:bg-white/2 transition-colors"
-              >
-                <span className="text-xs font-mono font-bold text-gray-700 dark:text-gray-300 truncate">
-                  {order.id}
-                </span>
-                <div className="min-w-0">
-                  <p className="text-xs font-medium text-gray-800 dark:text-gray-200 truncate">
-                    {order.items} item{order.items > 1 ? 's' : ''}
-                    {order.table && <span className="text-gray-400 font-normal"> · {order.table}</span>}
-                  </p>
-                </div>
-                <span className={`text-xs font-medium ${TYPE_MAP[order.type] ?? 'text-gray-500'} truncate`}>
-                  {order.type}
-                </span>
-                <div>
-                  <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${s.pill}`}>
-                    <span className={`w-1 h-1 rounded-full ${s.dot} shrink-0`} />
-                    {s.label}
-                  </span>
-                </div>
-                <span className="text-xs font-bold text-gray-900 dark:text-white">
-                  {order.total.toFixed(1)}
-                  <span className="text-gray-400 font-normal text-[10px] ml-0.5">TND</span>
-                </span>
-                <span className="text-[10px] text-gray-400 text-right">{order.ago}</span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ── Quick Actions ────────────────────────────────────── */}
-      <div>
-        <div className="flex items-center gap-2 mb-3">
-          <Flame size={14} className="text-orange-500" />
-          <p className="text-sm font-semibold text-gray-900 dark:text-white">Quick Actions</p>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            {
-              label: 'Open POS',
-              desc: 'Start taking orders',
-              icon: Monitor,
-              to: '/admin/pos',
-              iconColor: 'text-orange-500',
-              iconBg: 'bg-orange-50 dark:bg-orange-500/10',
-            },
-            {
-              label: 'Kitchen View',
-              desc: 'Check live prep queue',
-              icon: ChefHat,
-              to: '/admin/kitchen',
-              iconColor: 'text-red-500',
-              iconBg: 'bg-red-50 dark:bg-red-500/10',
-            },
-            {
-              label: 'Reservations',
-              desc: 'Book or manage tables',
-              icon: CalendarDays,
-              to: '/admin/reservations',
-              iconColor: 'text-purple-500',
-              iconBg: 'bg-purple-50 dark:bg-purple-500/10',
-            },
-            {
-              label: 'Table Map',
-              desc: 'View floor status',
-              icon: Grid3X3,
-              to: '/admin/tables',
-              iconColor: 'text-blue-500',
-              iconBg: 'bg-blue-50 dark:bg-blue-500/10',
-            },
-          ].map(({ label, desc, icon: Icon, to, iconColor, iconBg }) => (
-            <Link
-              key={to}
-              to={to}
-              className="group flex items-center gap-3 p-4 bg-white dark:bg-[#141414] border border-gray-100 dark:border-white/6 rounded-2xl hover:border-gray-200 dark:hover:border-white/12 hover:shadow-sm transition-all duration-150"
-            >
-              <div className={`w-9 h-9 rounded-xl ${iconBg} flex items-center justify-center shrink-0 transition-transform group-hover:scale-105`}>
-                <Icon size={16} className={iconColor} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold text-gray-900 dark:text-white truncate">{label}</p>
-                <p className="text-[10px] text-gray-400 mt-0.5 truncate">{desc}</p>
-              </div>
-              <ArrowRight
-                size={13}
-                className="text-gray-300 dark:text-gray-600 shrink-0 group-hover:text-orange-400 group-hover:translate-x-0.5 transition-all"
-              />
+        <div className="bg-white dark:bg-[#111111] border border-gray-100 dark:border-white/6 rounded-2xl p-4 flex flex-col gap-2 ui-shadow-sm transition-theme">
+          <h2 className="text-sm font-bold text-gray-900 dark:text-white mb-1">Quick Access</h2>
+          {quickLinks.map(({ to, label, icon: Icon, color, bg }) => (
+            <Link key={to} to={to} className={`flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all ${bg}`}>
+              <Icon size={14} className={color} />
+              <span className="text-xs font-semibold text-gray-700 dark:text-white">{label}</span>
+              <ArrowRight size={10} className="ml-auto text-gray-300 dark:text-white/20" />
             </Link>
           ))}
         </div>
       </div>
 
+      {/* Active orders + Alerts + Pie */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+        <div className="lg:col-span-2 bg-white dark:bg-[#111111] border border-gray-100 dark:border-white/6 rounded-2xl overflow-hidden ui-shadow-sm transition-theme">
+          <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-white/6">
+            <h2 className="text-sm font-bold text-gray-900 dark:text-white">Active Orders</h2>
+            <Link to="/admin/orders" className="text-[10px] text-orange-500 dark:text-orange-400 hover:text-orange-600 flex items-center gap-1">View all <ArrowRight size={10} /></Link>
+          </div>
+          <div className="divide-y divide-gray-50 dark:divide-white/4">
+            {activeOrders.length === 0 ? (
+              <div className="px-5 py-8 text-center text-gray-300 dark:text-white/20 text-xs">No active orders</div>
+            ) : activeOrders.map(order => {
+              const STATUS_DOT = { pending: 'bg-amber-500', confirmed: 'bg-blue-500', preparing: 'bg-orange-500', ready: 'bg-emerald-500 animate-pulse' };
+              return (
+                <div key={order._id} className="flex items-center gap-3 px-5 py-3">
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${STATUS_DOT[order.status] || 'bg-gray-400'}`} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-mono font-bold text-gray-900 dark:text-white">{order.orderNumber}</p>
+                    <p className="text-[10px] text-gray-400 dark:text-white/40 truncate">{order.items?.slice(0,2).map(i => i.name).join(', ')}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-xs font-bold text-orange-500 dark:text-orange-400">{order.total?.toFixed(1)} TND</p>
+                    <p className="text-[10px] text-gray-400 dark:text-white/30 capitalize">{order.status}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="bg-white dark:bg-[#111111] border border-gray-100 dark:border-white/6 rounded-2xl overflow-hidden ui-shadow-sm transition-theme">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-white/6">
+              <h2 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2"><Zap size={13} className="text-amber-500 dark:text-amber-400" /> Alerts</h2>
+              <Link to="/admin/alerts" className="text-[10px] text-orange-500 dark:text-orange-400">View all</Link>
+            </div>
+            <div className="p-3 space-y-2">
+              {alerts.length === 0 ? (
+                <div className="text-center py-4 text-gray-300 dark:text-white/20 text-xs flex flex-col items-center gap-1">
+                  <CheckCircle2 size={18} /><p>All clear</p>
+                </div>
+              ) : alerts.map(alert => {
+                const Icon = ALERT_ICONS[alert.severity] || Zap;
+                const style = ALERT_COLORS[alert.severity] || ALERT_COLORS.info;
+                return (
+                  <div key={alert._id} className={`flex gap-2 p-2.5 rounded-xl border ${style}`}>
+                    <Icon size={12} className="shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] font-bold leading-tight">{alert.title}</p>
+                      <p className="text-[10px] opacity-70 mt-0.5 line-clamp-1">{alert.message}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {pieData.length > 0 && (
+            <div className="bg-white dark:bg-[#111111] border border-gray-100 dark:border-white/6 rounded-2xl p-4 ui-shadow-sm transition-theme">
+              <h2 className="text-xs font-bold text-gray-900 dark:text-white mb-3">Orders by Type (7d)</h2>
+              <div className="flex items-center gap-3">
+                <PieChart width={70} height={70}>
+                  <Pie data={pieData} cx={35} cy={35} innerRadius={22} outerRadius={33} dataKey="value" strokeWidth={0}>
+                    {pieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                  </Pie>
+                </PieChart>
+                <div className="space-y-1.5 flex-1">
+                  {pieData.map(d => (
+                    <div key={d.name} className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: d.color }} />
+                        <span className="text-[10px] text-gray-500 dark:text-white/50 capitalize">{d.name}</span>
+                      </div>
+                      <span className="text-[10px] font-bold text-gray-900 dark:text-white">{d.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

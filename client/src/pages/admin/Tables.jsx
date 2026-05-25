@@ -1,188 +1,275 @@
-import { useState } from 'react';
-import { Plus, Users, CheckCircle2, Clock, Sparkles } from 'lucide-react';
-
-const INITIAL_TABLES = [
-  { id: 1,  name: 'T-01', capacity: 2,  status: 'available', floor: 'Main',    order: null },
-  { id: 2,  name: 'T-02', capacity: 4,  status: 'occupied',  floor: 'Main',    order: '#0042' },
-  { id: 3,  name: 'T-03', capacity: 4,  status: 'occupied',  floor: 'Main',    order: '#0039' },
-  { id: 4,  name: 'T-04', capacity: 2,  status: 'reserved',  floor: 'Main',    order: null },
-  { id: 5,  name: 'T-05', capacity: 6,  status: 'occupied',  floor: 'Main',    order: '#0040' },
-  { id: 6,  name: 'T-06', capacity: 4,  status: 'available', floor: 'Main',    order: null },
-  { id: 7,  name: 'T-07', capacity: 8,  status: 'reserved',  floor: 'Main',    order: null },
-  { id: 8,  name: 'T-08', capacity: 2,  status: 'cleaning',  floor: 'Main',    order: null },
-  { id: 9,  name: 'T-09', capacity: 4,  status: 'available', floor: 'Terrace', order: null },
-  { id: 10, name: 'T-10', capacity: 4,  status: 'occupied',  floor: 'Terrace', order: '#0038' },
-  { id: 11, name: 'T-11', capacity: 6,  status: 'available', floor: 'Terrace', order: null },
-  { id: 12, name: 'T-12', capacity: 2,  status: 'available', floor: 'Terrace', order: null },
-  { id: 13, name: 'T-13', capacity: 10, status: 'reserved',  floor: 'Private', order: null },
-  { id: 14, name: 'T-14', capacity: 6,  status: 'available', floor: 'Private', order: null },
-];
+import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
+import {
+  CheckCircle2, Clock, Users, Sparkles, X, RefreshCw,
+  TrendingUp, UtensilsCrossed, Loader2, Activity,
+} from 'lucide-react';
+import { restaurantService } from '../../services/restaurantService';
+import { analyticsService } from '../../services/analyticsService';
+import { useAuthStore } from '../../store/authStore';
+import { useSocket } from '../../hooks/useSocket';
 
 const STATUS_CONFIG = {
-  available: {
-    label: 'Available',
-    card: 'bg-emerald-50 dark:bg-emerald-500/8 border-emerald-200 dark:border-emerald-500/20',
-    badge: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400',
-    dot:   'bg-emerald-500',
-    icon:  CheckCircle2,
-    iconColor: 'text-emerald-500',
-  },
-  occupied: {
-    label: 'Occupied',
-    card: 'bg-orange-50 dark:bg-orange-500/8 border-orange-200 dark:border-orange-500/20',
-    badge: 'bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-400',
-    dot:   'bg-orange-500',
-    icon:  Users,
-    iconColor: 'text-orange-500',
-  },
-  reserved: {
-    label: 'Reserved',
-    card: 'bg-purple-50 dark:bg-purple-500/8 border-purple-200 dark:border-purple-500/20',
-    badge: 'bg-purple-100 text-purple-700 dark:bg-purple-500/15 dark:text-purple-400',
-    dot:   'bg-purple-500',
-    icon:  Clock,
-    iconColor: 'text-purple-500',
-  },
-  cleaning: {
-    label: 'Cleaning',
-    card: 'bg-yellow-50 dark:bg-yellow-500/8 border-yellow-200 dark:border-yellow-500/20',
-    badge: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/15 dark:text-yellow-400',
-    dot:   'bg-yellow-500',
-    icon:  Sparkles,
-    iconColor: 'text-yellow-500',
-  },
+  available: { label: 'Available', ring: 'ring-emerald-500/40', dot: 'bg-emerald-500', card: 'bg-emerald-500/8 border-emerald-500/20', text: 'text-emerald-400', icon: CheckCircle2, pulse: false },
+  occupied:  { label: 'Occupied',  ring: 'ring-orange-500/60',  dot: 'bg-orange-500',  card: 'bg-orange-500/10 border-orange-500/30',  text: 'text-orange-400',  icon: Users,        pulse: true  },
+  reserved:  { label: 'Reserved',  ring: 'ring-purple-500/40',  dot: 'bg-purple-500',  card: 'bg-purple-500/8 border-purple-500/20',   text: 'text-purple-400',  icon: Clock,        pulse: false },
+  cleaning:  { label: 'Cleaning',  ring: 'ring-yellow-500/40',  dot: 'bg-yellow-500',  card: 'bg-yellow-500/8 border-yellow-500/20',   text: 'text-yellow-400',  icon: Sparkles,     pulse: false },
 };
 
-const FLOORS = ['All', 'Main', 'Terrace', 'Private'];
-
-const statKeys = ['available', 'occupied', 'reserved', 'cleaning'];
-
-export default function Tables() {
-  const [tables, setTables] = useState(INITIAL_TABLES);
-  const [floor, setFloor]   = useState('All');
-
-  const displayed = floor === 'All' ? tables : tables.filter(t => t.floor === floor);
-
-  const counts = statKeys.reduce((acc, k) => {
-    acc[k] = tables.filter(t => t.status === k).length;
-    return acc;
-  }, {});
-
-  const cycleStatus = (id) => {
-    const cycle = { available: 'occupied', occupied: 'cleaning', cleaning: 'available', reserved: 'available' };
-    setTables(prev => prev.map(t => t.id === id ? { ...t, status: cycle[t.status], order: null } : t));
-  };
+function TableCard({ table, occupancyData, onClick, isSelected }) {
+  const cfg = STATUS_CONFIG[table.status] || STATUS_CONFIG.available;
+  const Icon = cfg.icon;
+  const occ = occupancyData?.find(o => o.tableId?.toString() === table._id?.toString());
 
   return (
-    <div className="p-5 sm:p-6 space-y-6 max-w-[1440px]">
+    <motion.div
+      layout
+      onClick={() => onClick(table)}
+      whileHover={{ y: -2 }}
+      whileTap={{ scale: 0.97 }}
+      className={`relative cursor-pointer rounded-2xl border p-4 transition-all ${cfg.card} ${isSelected ? `ring-2 ${cfg.ring}` : 'ring-0'} bg-white dark:bg-transparent`}
+    >
+      {cfg.pulse && (
+        <span className="absolute top-3 right-3">
+          <span className={`absolute inline-flex h-2 w-2 rounded-full ${cfg.dot} opacity-75 animate-ping`} />
+          <span className={`relative inline-flex h-2 w-2 rounded-full ${cfg.dot}`} />
+        </span>
+      )}
 
-      {/* Header */}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+      <div className="flex items-start justify-between mb-3">
         <div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white">Tables</h1>
-          <p className="text-xs text-gray-400 mt-0.5">Floor map &amp; status management</p>
+          <p className="text-lg font-black text-gray-900 dark:text-white">T-{table.number}</p>
+          <p className="text-[10px] text-gray-400 dark:text-white/40 mt-0.5">{table.floor || 'Main'}</p>
         </div>
-        <button className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold px-4 py-2 rounded-xl transition-colors shadow-sm shadow-orange-500/20">
-          <Plus size={14} /> Add Table
+        <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${cfg.dot.replace('bg-', 'bg-').replace('500', '500/20')}`}>
+          <Icon size={14} className={cfg.text} />
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1">
+          <Users size={11} className="text-gray-300 dark:text-white/30" />
+          <span className="text-[11px] text-gray-400 dark:text-white/50">{table.capacity}</span>
+        </div>
+        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${cfg.text} ${cfg.card}`}>{cfg.label}</span>
+      </div>
+
+      {occ && (
+        <div className="mt-2 pt-2 border-t border-gray-100 dark:border-white/6">
+          <p className="text-[10px] text-gray-400 dark:text-white/30">{occ.revenue?.toFixed(0)} TND · {occ.orderCount} covers</p>
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+function TableDrawer({ table, occupancyData, onClose, onUpdateStatus }) {
+  if (!table) return null;
+  const cfg = STATUS_CONFIG[table.status] || STATUS_CONFIG.available;
+  const occ = occupancyData?.find(o => o.tableId?.toString() === table._id?.toString());
+
+  const QUICK_STATUSES = table.status === 'occupied'
+    ? [{ key: 'cleaning', label: 'Mark Cleaning' }, { key: 'available', label: 'Mark Available' }]
+    : table.status === 'cleaning'
+    ? [{ key: 'available', label: 'Mark Available' }]
+    : [];
+
+  return (
+    <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+      transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+      className="fixed right-0 top-0 h-full w-80 bg-white dark:bg-[#0f0f0f] border-l border-gray-100 dark:border-white/8 z-40 flex flex-col shadow-2xl"
+    >
+      <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-white/6">
+        <div>
+          <p className="text-xs text-gray-400 dark:text-white/40">Table {table.number}</p>
+          <h2 className="text-base font-bold text-gray-900 dark:text-white">{table.floor || 'Main Floor'}</h2>
+        </div>
+        <button onClick={onClose} className="w-8 h-8 rounded-xl bg-gray-100 dark:bg-white/6 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-white/12 text-gray-400 dark:text-white/50 hover:text-gray-900 dark:hover:text-white transition-all">
+          <X size={14} />
         </button>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {statKeys.map(key => {
-          const cfg = STATUS_CONFIG[key];
-          const Icon = cfg.icon;
-          return (
-            <div key={key} className="bg-white dark:bg-[#141414] border border-gray-100 dark:border-white/6 rounded-2xl p-4 shadow-sm flex items-center gap-3">
-              <div className={`w-9 h-9 rounded-xl ${cfg.badge.split(' ').slice(0, 2).join(' ')} flex items-center justify-center shrink-0`}>
-                <Icon size={16} className={cfg.iconColor} />
-              </div>
-              <div>
-                <p className="text-xl font-bold text-gray-900 dark:text-white leading-none">{counts[key]}</p>
-                <p className="text-[10px] text-gray-400 mt-0.5 capitalize">{cfg.label}</p>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      <div className="flex-1 overflow-y-auto p-5 space-y-4">
+        {/* Status */}
+        <div className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border ${cfg.card}`}>
+          <span className={`w-2 h-2 rounded-full ${cfg.dot} ${cfg.pulse ? 'animate-pulse' : ''}`} />
+          <span className={`text-sm font-bold ${cfg.text}`}>{cfg.label}</span>
+        </div>
 
-      {/* Floor filter + map */}
-      <div className="bg-white dark:bg-[#141414] border border-gray-100 dark:border-white/6 rounded-2xl shadow-sm overflow-hidden">
-
-        {/* Floor tabs */}
-        <div className="flex items-center gap-0 px-5 pt-4 border-b border-gray-100 dark:border-white/6">
-          {FLOORS.map(f => (
-            <button
-              key={f}
-              onClick={() => setFloor(f)}
-              className={[
-                'px-4 py-2.5 text-xs font-semibold border-b-2 transition-all',
-                floor === f
-                  ? 'text-orange-500 border-orange-500'
-                  : 'text-gray-400 border-transparent hover:text-gray-600 dark:hover:text-gray-300',
-              ].join(' ')}
-            >
-              {f}
-            </button>
-          ))}
-
-          {/* Legend */}
-          <div className="ml-auto flex items-center gap-3 pb-2 pr-1">
-            {statKeys.map(k => (
-              <div key={k} className="hidden sm:flex items-center gap-1">
-                <span className={`w-2 h-2 rounded-full ${STATUS_CONFIG[k].dot}`} />
-                <span className="text-[9px] text-gray-400 capitalize">{k}</span>
-              </div>
-            ))}
+        {/* Specs */}
+        <div className="grid grid-cols-2 gap-2">
+          <div className="bg-gray-50 dark:bg-white/4 rounded-xl p-3 text-center">
+            <p className="text-lg font-black text-gray-900 dark:text-white">{table.capacity}</p>
+            <p className="text-[10px] text-gray-400 dark:text-white/40">Capacity</p>
+          </div>
+          <div className="bg-gray-50 dark:bg-white/4 rounded-xl p-3 text-center">
+            <p className="text-sm font-bold text-gray-900 dark:text-white capitalize">{table.shape || 'round'}</p>
+            <p className="text-[10px] text-gray-400 dark:text-white/40">Shape</p>
           </div>
         </div>
 
-        {/* Table grid */}
-        <div className="p-5 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-3">
-          {displayed.map(table => {
-            const cfg = STATUS_CONFIG[table.status];
-            const Icon = cfg.icon;
-            return (
-              <button
-                key={table.id}
-                onClick={() => cycleStatus(table.id)}
-                title={`Click to cycle status`}
-                className={[
-                  'border-2 rounded-2xl p-3.5 text-left transition-all duration-150',
-                  'hover:shadow-md hover:-translate-y-0.5 active:scale-95',
-                  cfg.card,
-                ].join(' ')}
+        {/* Occupancy stats (last 30 days) */}
+        {occ && (
+          <div>
+            <p className="text-[10px] font-bold text-gray-400 dark:text-white/40 uppercase tracking-wider mb-2">30-Day Performance</p>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="bg-gray-50 dark:bg-white/4 rounded-xl p-3 text-center">
+                <p className="text-base font-black text-orange-400">{occ.revenue?.toFixed(0)}</p>
+                <p className="text-[9px] text-gray-400 dark:text-white/40">Revenue TND</p>
+              </div>
+              <div className="bg-gray-50 dark:bg-white/4 rounded-xl p-3 text-center">
+                <p className="text-base font-black text-blue-400">{occ.orderCount}</p>
+                <p className="text-[9px] text-gray-400 dark:text-white/40">Covers</p>
+              </div>
+              <div className="bg-gray-50 dark:bg-white/4 rounded-xl p-3 text-center">
+                <p className="text-base font-black text-emerald-400">{occ.avgSpend?.toFixed(0)}</p>
+                <p className="text-[9px] text-gray-400 dark:text-white/40">Avg Spend</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {QUICK_STATUSES.length > 0 && (
+        <div className="px-5 py-4 border-t border-gray-100 dark:border-white/6 space-y-2">
+          {QUICK_STATUSES.map(s => (
+            <button key={s.key} onClick={() => onUpdateStatus(table._id, s.key)}
+              className="w-full py-2.5 bg-gray-100 dark:bg-white/8 hover:bg-gray-200 dark:hover:bg-white/15 text-gray-900 dark:text-white text-sm font-semibold rounded-xl transition-colors"
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+export default function Tables() {
+  const { user } = useAuthStore();
+  const qc = useQueryClient();
+  const [selectedTable, setSelectedTable] = useState(null);
+  const [floorFilter, setFloorFilter] = useState('All');
+
+  const { data: tables = [], isLoading, refetch } = useQuery({
+    queryKey: ['owner-tables'],
+    queryFn: () => restaurantService.getTables().then(r => r.data),
+    refetchInterval: 60_000,
+  });
+
+  const { data: occupancyData = [] } = useQuery({
+    queryKey: ['table-occupancy'],
+    queryFn: () => analyticsService.getTableOccupancy(30).then(r => r.data),
+  });
+
+  useSocket(user?.restaurant, {
+    'table:status_changed': ({ tableId, status }) => {
+      qc.setQueryData(['owner-tables'], (old = []) =>
+        old.map(t => t._id?.toString() === tableId?.toString() ? { ...t, status } : t)
+      );
+    },
+  });
+
+  const { mutate: updateTableStatus } = useMutation({
+    mutationFn: ({ id, status }) => restaurantService.updateTable(id, { status }),
+    onSuccess: () => { qc.invalidateQueries(['owner-tables']); toast.success('Table updated'); setSelectedTable(null); },
+    onError: (e) => toast.error(e.response?.data?.message || 'Failed'),
+  });
+
+  const floors = ['All', ...new Set(tables.map(t => t.floor || 'Main'))];
+  const filtered = floorFilter === 'All' ? tables : tables.filter(t => (t.floor || 'Main') === floorFilter);
+
+  const stats = {
+    available: tables.filter(t => t.status === 'available').length,
+    occupied:  tables.filter(t => t.status === 'occupied').length,
+    reserved:  tables.filter(t => t.status === 'reserved').length,
+    cleaning:  tables.filter(t => t.status === 'cleaning').length,
+  };
+
+  return (
+    <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-gray-50 dark:bg-[#0a0a0a]">
+      <div className="flex-1 flex flex-col min-w-0">
+
+        {/* Header */}
+        <div className="px-5 py-4 bg-white dark:bg-transparent border-b border-gray-100 dark:border-white/6 flex items-center justify-between gap-3">
+          <div>
+            <h1 className="text-base font-bold text-gray-900 dark:text-white">Tables</h1>
+            <p className="text-xs text-gray-400 dark:text-white/30 mt-0.5">Live floor status</p>
+          </div>
+          <button onClick={() => refetch()} className="w-8 h-8 rounded-xl bg-gray-100 dark:bg-white/6 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-white/12 text-gray-400 dark:text-white/40 hover:text-gray-700 dark:hover:text-white transition-all">
+            <RefreshCw size={13} />
+          </button>
+        </div>
+
+        {/* Stats */}
+        <div className="px-5 py-3 bg-white dark:bg-transparent flex gap-3 border-b border-gray-100 dark:border-white/6 flex-wrap">
+          {[
+            { label: 'Available', count: stats.available, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-500/10' },
+            { label: 'Occupied',  count: stats.occupied,  color: 'text-orange-600 dark:text-orange-400',  bg: 'bg-orange-50 dark:bg-orange-500/10' },
+            { label: 'Reserved',  count: stats.reserved,  color: 'text-purple-600 dark:text-purple-400',  bg: 'bg-purple-50 dark:bg-purple-500/10' },
+            { label: 'Cleaning',  count: stats.cleaning,  color: 'text-yellow-600 dark:text-yellow-400',  bg: 'bg-yellow-50 dark:bg-yellow-500/10' },
+          ].map(s => (
+            <div key={s.label} className={`flex items-center gap-2 px-3 py-1.5 rounded-xl ${s.bg}`}>
+              <span className={`text-lg font-black tabular-nums ${s.color}`}>{s.count}</span>
+              <span className="text-[10px] text-gray-500 dark:text-white/40">{s.label}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Floor filter */}
+        {floors.length > 2 && (
+          <div className="px-5 py-2 bg-white dark:bg-transparent flex gap-2 border-b border-gray-100 dark:border-white/6 overflow-x-auto scrollbar-none">
+            {floors.map(floor => (
+              <button key={floor} onClick={() => setFloorFilter(floor)}
+                className={`shrink-0 px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+                  floorFilter === floor ? 'bg-orange-500 text-white' : 'bg-gray-100 dark:bg-white/6 text-gray-500 dark:text-white/50 hover:text-gray-900 dark:hover:text-white'
+                }`}
               >
-                <div className="flex items-start justify-between mb-2.5">
-                  <span className="text-sm font-bold text-gray-900 dark:text-white">{table.name}</span>
-                  <Icon size={13} className={cfg.iconColor} />
-                </div>
-
-                <div className="flex items-center gap-1 mb-2">
-                  <Users size={10} className="text-gray-400" />
-                  <span className="text-[10px] text-gray-500">{table.capacity}</span>
-                </div>
-
-                <div>
-                  <span className={`inline-flex items-center gap-1 text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${cfg.badge}`}>
-                    <span className={`w-1 h-1 rounded-full ${cfg.dot} shrink-0`} />
-                    {cfg.label}
-                  </span>
-                </div>
-
-                {table.order && (
-                  <p className="text-[9px] text-gray-400 mt-1.5 font-mono">{table.order}</p>
-                )}
+                {floor}
               </button>
-            );
-          })}
+            ))}
+          </div>
+        )}
+
+        {/* Grid */}
+        <div className="flex-1 overflow-y-auto p-5">
+          {isLoading ? (
+            <div className="flex items-center justify-center h-40 text-gray-300 dark:text-white/30"><Loader2 size={22} className="animate-spin" /></div>
+          ) : filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-40 text-gray-300 dark:text-white/20 gap-2">
+              <UtensilsCrossed size={28} /><p className="text-xs">No tables configured</p>
+              <p className="text-[11px] text-gray-300 dark:text-white/15">Add tables in VIP Setup</p>
+            </div>
+          ) : (
+            <motion.div layout className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+              <AnimatePresence>
+                {filtered.map(table => (
+                  <TableCard
+                    key={table._id}
+                    table={table}
+                    occupancyData={occupancyData}
+                    onClick={setSelectedTable}
+                    isSelected={selectedTable?._id === table._id}
+                  />
+                ))}
+              </AnimatePresence>
+            </motion.div>
+          )}
         </div>
       </div>
 
-      {/* Floor name label */}
-      <p className="text-[10px] text-gray-400 text-center">
-        Click any table to cycle its status · {displayed.length} tables shown
-      </p>
+      <AnimatePresence>
+        {selectedTable && (
+          <TableDrawer
+            table={selectedTable}
+            occupancyData={occupancyData}
+            onClose={() => setSelectedTable(null)}
+            onUpdateStatus={(id, status) => updateTableStatus({ id, status })}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

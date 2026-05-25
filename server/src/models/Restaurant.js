@@ -100,20 +100,57 @@ const restaurantSchema = new mongoose.Schema(
       enabled:     { type: Boolean, default: false },
       description: { type: String, default: '' },
       minSpend:    { type: Number, default: 0 },
+
+      // Multi-floor layout data (new format)
+      floors: [{
+        id:    { type: String },
+        name:  { type: String, default: 'Ground Floor' },
+        order: { type: Number, default: 0 },
+        room: {
+          x: { type: Number, default: 80 },
+          y: { type: Number, default: 60 },
+          w: { type: Number, default: 760 },
+          h: { type: Number, default: 480 },
+        },
+        zones: [{
+          id:    { type: String },
+          label: { type: String, default: '' },
+          color: { type: String, default: '#f59e0b' },
+          x: Number, y: Number, w: Number, h: Number,
+        }],
+        walls: [{
+          id:        { type: String },
+          x1: Number, y1: Number, x2: Number, y2: Number,
+          thickness: { type: Number, default: 14 },
+        }],
+        doors: [{
+          id:         { type: String },
+          x: Number, y: Number,
+          width:      { type: Number, default: 70 },
+          rotation:   { type: Number, default: 0 },
+          openAngle:  { type: Number, default: 75 },
+          swingDir:   { type: Number, default: 1 },
+        }],
+        windows: [{
+          id:       { type: String },
+          x: Number, y: Number,
+          width:    { type: Number, default: 80 },
+          rotation: { type: Number, default: 0 },
+        }],
+      }],
+
+      // Legacy single-room format (kept for backwards compat during migration)
       zones: [{
         id:    { type: String },
         label: { type: String, default: '' },
         color: { type: String, default: '#f59e0b' },
-        x:     { type: Number },
-        y:     { type: Number },
-        w:     { type: Number },
-        h:     { type: Number },
+        x: Number, y: Number, w: Number, h: Number,
       }],
       room: {
-        x: { type: Number, default: 40 },
-        y: { type: Number, default: 40 },
-        w: { type: Number, default: 820 },
-        h: { type: Number, default: 520 },
+        x: { type: Number, default: 80 },
+        y: { type: Number, default: 60 },
+        w: { type: Number, default: 760 },
+        h: { type: Number, default: 480 },
       },
     },
 
