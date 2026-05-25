@@ -3,6 +3,7 @@ import authRoutes from './authRoutes.js';
 import restaurantRoutes from './restaurantRoutes.js';
 import adminRoutes from './adminRoutes.js';
 import ownerRoutes from './ownerRoutes.js';
+import qrRoutes from './qrRoutes.js';
 import { getPublicStatus } from '../controllers/platformController.js';
 
 const router = Router();
@@ -12,15 +13,6 @@ router.use('/auth',            authRoutes);
 router.use('/restaurants',     restaurantRoutes);
 router.use('/platform-admin',  adminRoutes);
 router.use('/owner',           ownerRoutes);
-
-// Placeholder routes — will be built module by module
-// router.use('/menu', menuRoutes);
-// router.use('/orders', orderRoutes);
-// router.use('/tables', tableRoutes);
-// router.use('/reservations', reservationRoutes);
-// router.use('/staff', staffRoutes);
-// router.use('/inventory', inventoryRoutes);
-// router.use('/delivery', deliveryRoutes);
-// router.use('/analytics', analyticsRoutes);
+router.use('/qr',              qrRoutes);          // public QR ordering
 
 export default router;
