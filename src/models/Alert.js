@@ -15,6 +15,7 @@ const alertSchema = new mongoose.Schema(
         'vip_returning', 'vip_inactive',
         'table_idle', 'table_delayed',
         'staff_underperformance',
+        'reservation_new', 'reservation_confirmed', 'reservation_cancelled',
         'system',
       ],
     },
