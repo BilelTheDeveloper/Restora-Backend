@@ -436,7 +436,7 @@ export default function VIPBookingPage() {
       tableId: selectedId, ...form, partySize: Number(form.partySize),
     }),
     onSuccess: () => setDone(true),
-    onError: err => toast.error(err.response?.data?.message || 'Booking failed — please try again.'),
+    onError: err => toast.error(err?.message || 'Booking failed — please try again.'),
   });
 
   // Min party: capacity ≤ 4 → must fill exactly; capacity > 4 → capacity - 2

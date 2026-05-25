@@ -225,7 +225,7 @@ export default function Reservations() {
         status: statusFilter !== 'all' ? statusFilter : undefined,
         date:   dateFilter || undefined,
       },
-    }).then(r => r.data.data ?? []),
+    }).then(r => r.data ?? []),
   });
 
   const reservations = data ?? [];
