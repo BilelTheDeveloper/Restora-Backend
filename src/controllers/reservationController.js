@@ -63,7 +63,7 @@ export const createPublicReservation = async (req, res, next) => {
       // Check for existing reservation at this table/date/time
       const { start, end } = dayRange(date);
       const conflict = await Reservation.findOne({
-        restaurant: rid,
+        restaurant: restaurant._id,
         table: tableId,
         date: { $gte: start, $lte: end },
         time,
