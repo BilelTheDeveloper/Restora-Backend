@@ -63,7 +63,7 @@ export const createPublicReservation = async (req, res, next) => {
       // Check for existing reservation at this table/date/time
       const { start, end } = dayRange(date);
       const conflict = await Reservation.findOne({
-        restaurant: restaurant._id,
+        restaurant: rid,
         table: tableId,
         date: { $gte: start, $lte: end },
         time,
@@ -116,11 +116,11 @@ export const createPublicReservation = async (req, res, next) => {
 // ── Owner: get all reservations ──────────────────────────────────
 export const getMyReservations = async (req, res, next) => {
   try {
-    const restaurant = await Restaurant.findOne({ owner: req.user._id }).select('_id');
-    if (!restaurant) { res.status(404); return next(new Error('Restaurant not found')); }
+    const rid = req.user.restaurant;
+    if (!rid) { res.status(404); return next(new Error('No restaurant linked to this account')); }
 
     const { status, date } = req.query;
-    const query = { restaurant: restaurant._id };
+    const query = { restaurant: rid };
     if (status && status !== 'all') query.status = status;
     if (date) {
       const { start, end } = dayRange(date);
@@ -138,14 +138,14 @@ export const getMyReservations = async (req, res, next) => {
 // ── Owner: update reservation status ────────────────────────────
 export const updateReservationStatus = async (req, res, next) => {
   try {
-    const restaurant = await Restaurant.findOne({ owner: req.user._id }).select('_id');
-    if (!restaurant) { res.status(404); return next(new Error('Restaurant not found')); }
+    const rid = req.user.restaurant;
+    if (!rid) { res.status(404); return next(new Error('No restaurant linked to this account')); }
 
     const VALID = ['pending', 'confirmed', 'seated', 'completed', 'cancelled', 'no-show'];
     if (!VALID.includes(req.body.status)) { res.status(400); return next(new Error('Invalid status')); }
 
     const reservation = await Reservation.findOneAndUpdate(
-      { _id: req.params.id, restaurant: restaurant._id },
+      { _id: req.params.id, restaurant: rid },
       { status: req.body.status },
       { new: true }
     ).populate('table', 'number capacity shape floor');
@@ -153,13 +153,13 @@ export const updateReservationStatus = async (req, res, next) => {
     if (!reservation) { res.status(404); return next(new Error('Reservation not found')); }
 
     // ── Emit real-time update ─────────────────────────────────
-    emitToRestaurant(restaurant._id, 'reservation:updated', reservation.toObject());
+    emitToRestaurant(rid, 'reservation:updated', reservation.toObject());
 
     // ── Create alert when owner confirms/cancels ───────────────
     if (req.body.status === 'confirmed') {
       const tableLabel = reservation.table ? `Table ${reservation.table.number}` : 'walk-in';
       await Alert.create({
-        restaurant: restaurant._id,
+        restaurant: rid,
         type:       'reservation_confirmed',
         severity:   'info',
         title:      `Reservation confirmed — ${reservation.customerName}`,
@@ -171,7 +171,7 @@ export const updateReservationStatus = async (req, res, next) => {
 
     if (req.body.status === 'cancelled') {
       await Alert.create({
-        restaurant: restaurant._id,
+        restaurant: rid,
         type:       'reservation_cancelled',
         severity:   'warning',
         title:      `Reservation cancelled — ${reservation.customerName}`,
