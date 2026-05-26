@@ -37,6 +37,13 @@ const customerSchema = new mongoose.Schema(
     lastVisit:     { type: Date },
 
     tags: [{ type: String }],
+
+    loyalty: {
+      points:         { type: Number, default: 0 },
+      lifetimePoints: { type: Number, default: 0 },
+      tier:           { type: String, default: 'Bronze' },
+      enrolledAt:     { type: Date },
+    },
   },
   { timestamps: true }
 );
